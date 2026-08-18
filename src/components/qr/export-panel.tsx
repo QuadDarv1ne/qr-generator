@@ -178,12 +178,21 @@ export function ExportPanel() {
 
       const dataUrl = canvas.toDataURL('image/png');
       const svgStr = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${opts.size}" height="${opts.size}" viewBox="0 0 ${opts.size} ${opts.size}">
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="${opts.size}" height="${opts.size}"
+     viewBox="0 0 ${opts.size} ${opts.size}"
+     version="1.1">
+  <metadata>
+    <generator>QR Generator</generator>
+  </metadata>
   <rect width="100%" height="100%" fill="${opts.colors.backgroundColor}"/>
-  <image width="${opts.size}" height="${opts.size}" href="${dataUrl}"/>
+  <image width="${opts.size}" height="${opts.size}"
+         xlink:href="${dataUrl}"
+         preserveAspectRatio="none"/>
 </svg>`;
 
-      const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

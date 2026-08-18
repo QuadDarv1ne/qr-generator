@@ -35,7 +35,13 @@ function encodeEmail(e: QRDataForms['email']): string {
 
 function encodeWifi(w: QRDataForms['wifi']): string {
   const hidden = w.hidden ? 'H:true' : '';
-  return `WIFI:T:${w.encryption};S:${w.ssid};P:${w.password};${hidden};;`;
+  const parts = [
+    `T:${w.encryption}`,
+    `S:${w.ssid || 'Unnamed'}`,
+    w.encryption !== 'NOPASS' ? `P:${w.password}` : '',
+    hidden,
+  ].filter(Boolean);
+  return `WIFI:${parts.join(';')};;;`;
 }
 
 function encodeVCard(v: QRDataForms['vcard']): string {
@@ -43,10 +49,15 @@ function encodeVCard(v: QRDataForms['vcard']): string {
     'BEGIN:VCARD',
     'VERSION:3.0',
   ];
-  if (v.firstName || v.lastName) {
-    lines.push(`N:${v.lastName};${v.firstName};;;`);
-    lines.push(`FN:${v.firstName} ${v.lastName}`.trim());
+  
+  // Handle name fields
+  const hasName = v.firstName || v.lastName;
+  if (hasName) {
+    const fullName = [v.firstName, v.lastName].filter(Boolean).join(' ').trim();
+    lines.push(`N:${v.lastName || ''};${v.firstName || ''};;;`);
+    lines.push(`FN:${fullName}`);
   }
+  
   if (v.organization) lines.push(`ORG:${v.organization}`);
   if (v.title) lines.push(`TITLE:${v.title}`);
   if (v.phone) lines.push(`TEL;TYPE=CELL:${v.phone}`);
@@ -66,18 +77,18 @@ function encodeLocation(loc: QRDataForms['location']): string {
 }
 
 function encodeEvent(ev: QRDataForms['event']): string {
-  const fmtDate = (d: string, t: string) => {
-    if (!d) return '';
-    const dt = t ? `${d}T${t}` : d;
-    return dt.replace(/[-:]/g, '').split('.')[0] + '00';
+  const fmtDate = (d: string, t: string): string => {
+    if (!d) return '20250101T090000';
+    const dt = t ? `${d}T${t}` : `${d}T090000`;
+    return dt.replace(/[-:]/g, '');
   };
   const start = fmtDate(ev.startDate, ev.startTime);
   const end = fmtDate(ev.endDate, ev.endTime);
   const lines = [
     'BEGIN:VEVENT',
     `SUMMARY:${ev.title || 'Событие'}`,
-    `DTSTART:${start || '20250101T090000'}`,
-    `DTEND:${end || '20250101T100000'}`,
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
   ];
   if (ev.location) lines.push(`LOCATION:${ev.location}`);
   if (ev.description) lines.push(`DESCRIPTION:${ev.description}`);

@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import type { QRDataType } from '@/lib/qr-types';
+import type { QRDataType, QRDataForms } from '@/lib/qr-types';
 
 export function DataForm() {
   const { dataType, formData, updateFormData } = useQRStore();
@@ -244,8 +244,8 @@ function VCardForm({
   value,
   onChange,
 }: {
-  value: QRDataType extends 'vcard' ? any : any;
-  onChange: (v: any) => void;
+  value: QRDataForms['vcard'];
+  onChange: (v: QRDataForms['vcard']) => void;
 }) {
   return (
     <div className="space-y-4">

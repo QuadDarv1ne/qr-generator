@@ -7,6 +7,7 @@ import { LogoPanel } from '@/components/qr/logo-panel';
 import { DesignPanel } from '@/components/qr/design-panel';
 import { SettingsPanel } from '@/components/qr/settings-panel';
 import { QRPreview } from '@/components/qr/qr-preview';
+import { QRDataPreview } from '@/components/qr/qr-data-preview';
 import { ExportPanel } from '@/components/qr/export-panel';
 import {
   Accordion,
@@ -154,6 +155,9 @@ export default function QRGeneratorPage() {
                   Предпросмотр
                 </h2>
                 <QRPreview />
+                <div className="mt-4">
+                  <QRDataPreview />
+                </div>
               </motion.div>
               {/* Export card (mobile) */}
               <motion.div
@@ -255,6 +259,9 @@ export default function QRGeneratorPage() {
                     Предпросмотр
                   </h2>
                   <QRPreview />
+                  <div className="mt-4">
+                    <QRDataPreview />
+                  </div>
                 </motion.div>
 
                 <motion.div
