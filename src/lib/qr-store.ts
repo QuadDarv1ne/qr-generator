@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   QRDataType,
   QRDataForms,
@@ -31,6 +32,8 @@ interface QRStore {
   // Logo
   logo: LogoState;
   setLogo: (logo: LogoState) => void;
+  logoSize: number;
+  setLogoSize: (s: number) => void;
 
   // Design
   dotShape: DotShape;
@@ -47,6 +50,9 @@ interface QRStore {
   setResolution: (r: number) => void;
   printPreset: PrintPreset;
   setPrintPreset: (p: PrintPreset) => void;
+
+  // Reset all settings to defaults
+  reset: () => void;
 }
 
 const defaultFormData: QRDataForms = {
@@ -77,6 +83,9 @@ const defaultFormData: QRDataForms = {
     endTime: '10:00',
     description: '',
   },
+  crypto: { currency: 'BTC', address: '', amount: '', label: '' },
+  telegram: { username: '', text: '' },
+  whatsapp: { phone: '', message: '' },
 };
 
 const defaultColors: QRColorSettings = {
@@ -91,50 +100,64 @@ const defaultColors: QRColorSettings = {
   dotColor: '#000000',
 };
 
-export const useQRStore = create<QRStore>((set) => ({
-  dataType: 'url',
-  setDataType: (dataType) => set({ dataType }),
-
+const initialState = {
+  dataType: 'url' as QRDataType,
   formData: defaultFormData,
-  updateFormData: (key, value) =>
-    set((state) => ({ formData: { ...state.formData, [key]: value } })),
-
   colors: defaultColors,
-  updateColors: (partial) =>
-    set((state) => ({ colors: { ...state.colors, ...partial } })),
-
-  logo: { dataUrl: null, name: '' },
-  setLogo: (logo) => set({ logo }),
-
-  dotShape: 'square',
-  setDotShape: (dotShape) => set({ dotShape }),
-
-  eyeFrame: 'square',
-  setEyeFrame: (eyeFrame) => set({ eyeFrame }),
-
-  eyeBall: 'square',
-  setEyeBall: (eyeBall) => set({ eyeBall }),
-
-  errorCorrection: 'M',
-  setErrorCorrection: (errorCorrection) => set({ errorCorrection }),
-
+  logo: { dataUrl: null as string | null, name: '' },
+  logoSize: 22,
+  dotShape: 'square' as DotShape,
+  eyeFrame: 'square' as EyeFrameShape,
+  eyeBall: 'square' as EyeBallShape,
+  errorCorrection: 'M' as ErrorCorrectionLevel,
   resolution: 1024,
-  setResolution: (resolution) => set({ resolution }),
+  printPreset: 'none' as PrintPreset,
+};
 
-  printPreset: 'none',
-  setPrintPreset: (printPreset) => set({ printPreset }),
+export const useQRStore = create<QRStore>()(
+  persist(
+    (set) => ({
+      ...initialState,
 
-  // Reset all settings to defaults
-  reset: () => set({
-    dataType: 'url',
-    formData: defaultFormData,
-    colors: defaultColors,
-    logo: { dataUrl: null, name: '' },
-    dotShape: 'square',
-    eyeFrame: 'square',
-    eyeBall: 'square',
-    errorCorrection: 'M',
-    resolution: 1024,
-    printPreset: 'none',
-  }),
-}));
+      setDataType: (dataType) => set({ dataType }),
+
+      updateFormData: (key, value) =>
+        set((state) => ({ formData: { ...state.formData, [key]: value } })),
+
+      updateColors: (partial) =>
+        set((state) => ({ colors: { ...state.colors, ...partial } })),
+
+      setLogo: (logo) => set({ logo }),
+
+      setLogoSize: (logoSize) => set({ logoSize }),
+
+      setDotShape: (dotShape) => set({ dotShape }),
+
+      setEyeFrame: (eyeFrame) => set({ eyeFrame }),
+
+      setEyeBall: (eyeBall) => set({ eyeBall }),
+
+      setErrorCorrection: (errorCorrection) => set({ errorCorrection }),
+
+      setResolution: (resolution) => set({ resolution }),
+
+      setPrintPreset: (printPreset) => set({ printPreset }),
+
+      // Reset all settings to defaults
+      reset: () => set({ ...initialState }),
+    }),
+    {
+      name: 'qr-generator-settings',
+      // SSR-safe: on the server there is no localStorage, so persistence is skipped
+      storage:
+        typeof window !== 'undefined'
+          ? createJSONStorage(() => localStorage)
+          : undefined,
+      partialize: (state) => ({
+        ...state,
+        // Do not persist the logo (large data URL may exceed localStorage quota)
+        logo: { dataUrl: null, name: '' },
+      }),
+    }
+  )
+);

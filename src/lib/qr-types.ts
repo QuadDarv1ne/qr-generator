@@ -9,7 +9,10 @@ export type QRDataType =
   | 'wifi'
   | 'vcard'
   | 'location'
-  | 'event';
+  | 'event'
+  | 'crypto'
+  | 'telegram'
+  | 'whatsapp';
 
 export interface QRDataForms {
   url: string;
@@ -39,7 +42,21 @@ export interface QRDataForms {
     endTime: string;
     description: string;
   };
+  crypto: { currency: CryptoCurrency; address: string; amount: string; label: string };
+  telegram: { username: string; text: string };
+  whatsapp: { phone: string; message: string };
 }
+
+export type CryptoCurrency = 'BTC' | 'ETH' | 'USDT' | 'LTC' | 'DOGE' | 'BCH';
+
+export const CRYPTO_CURRENCY_LABELS: Record<CryptoCurrency, string> = {
+  BTC: 'Bitcoin (BTC)',
+  ETH: 'Ethereum (ETH)',
+  USDT: 'Tether (USDT, TRC-20)',
+  LTC: 'Litecoin (LTC)',
+  DOGE: 'Dogecoin (DOGE)',
+  BCH: 'Bitcoin Cash (BCH)',
+};
 
 export interface QRColorSettings {
   mode: 'solid' | 'gradient';
@@ -97,6 +114,9 @@ export const QR_DATA_TYPE_LABELS: Record<QRDataType, string> = {
   vcard: 'Контакт (vCard)',
   location: 'Геолокация',
   event: 'Событие',
+  crypto: 'Криптовалюта',
+  telegram: 'Telegram',
+  whatsapp: 'WhatsApp',
 };
 
 export const QR_DATA_TYPE_ICONS: Record<QRDataType, string> = {
@@ -109,6 +129,9 @@ export const QR_DATA_TYPE_ICONS: Record<QRDataType, string> = {
   vcard: 'Contact',
   location: 'MapPin',
   event: 'Calendar',
+  crypto: 'Coins',
+  telegram: 'Send',
+  whatsapp: 'MessageCircle',
 };
 
 export const PRINT_PRESET_LABELS: Record<PrintPreset, string> = {

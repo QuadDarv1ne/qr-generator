@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useQRStore } from '@/lib/qr-store';
 import { encodeQRData, validateQRData } from '@/lib/qr-encoders';
-import { renderQRToCanvas, getPrintPresetConfig } from '@/lib/qr-renderer';
+import { renderQRToCanvas, generateQRSVG, getPrintPresetConfig } from '@/lib/qr-renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileImage, FileText, Loader2, Copy, RotateCcw, Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,7 +26,6 @@ const PDF_SIZE_OPTIONS = [
 ];
 
 export function ExportPanel() {
-  const exportCanvasRef = useRef<HTMLCanvasElement>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   const [pdfSize, setPdfSize] = useState('auto');
   const [copied, setCopied] = useState(false);
@@ -42,11 +41,19 @@ export function ExportPanel() {
     resolution,
     printPreset,
     logo,
+    logoSize,
   } = useQRStore();
 
   const getDataString = useCallback(() => {
     return encodeQRData(dataType, formData);
   }, [dataType, formData]);
+
+  /** Effective error correction: print presets override the manual setting */
+  const getEffectiveErrorCorrection = useCallback(() => {
+    return printPreset !== 'none'
+      ? getPrintPresetConfig(printPreset).errorCorrection
+      : errorCorrection;
+  }, [printPreset, errorCorrection]);
 
   const getExportOptions = useCallback(() => {
     const data = getDataString();
@@ -61,13 +68,14 @@ export function ExportPanel() {
       eyeBall,
       errorCorrection: printPreset !== 'none' ? presetConfig.errorCorrection : errorCorrection,
       logo: logo.dataUrl,
+      logoSize,
       margin: size * 0.08,
     };
-  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, getDataString]);
+  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize, getDataString]);
 
   const validate = (): string | null => {
     const data = getDataString();
-    const err = validateQRData(data, errorCorrection);
+    const err = validateQRData(data, getEffectiveErrorCorrection());
     if (err) return err;
     return null;
   };
@@ -157,25 +165,8 @@ export function ExportPanel() {
 
     setExporting('svg');
     try {
-      const canvas = document.createElement('canvas');
       const opts = getExportOptions();
-      await renderQRToCanvas(canvas, opts);
-
-      const dataUrl = canvas.toDataURL('image/png');
-      const svgStr = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg"
-     xmlns:xlink="http://www.w3.org/1999/xlink"
-     width="${opts.size}" height="${opts.size}"
-     viewBox="0 0 ${opts.size} ${opts.size}"
-     version="1.1">
-  <metadata>
-    <generator>QR Generator</generator>
-  </metadata>
-  <rect width="100%" height="100%" fill="${opts.colors.backgroundColor}"/>
-  <image width="${opts.size}" height="${opts.size}"
-         xlink:href="${dataUrl}"
-         preserveAspectRatio="none"/>
-</svg>`;
+      const svgStr = await generateQRSVG(opts);
 
       const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
@@ -236,9 +227,7 @@ export function ExportPanel() {
   const isExporting = !!exporting;
 
   return (
-    <>
-      <canvas ref={exportCanvasRef} className="hidden" />
-      <div className="flex flex-col gap-3 w-full">
+    <div className="flex flex-col gap-3 w-full">
         {/* Main PNG button */}
         <Button
           onClick={exportPNG}
@@ -328,6 +317,5 @@ export function ExportPanel() {
           Сбросить настройки
         </Button>
       </div>
-    </>
   );
 }

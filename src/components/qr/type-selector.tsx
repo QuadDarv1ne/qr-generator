@@ -15,6 +15,9 @@ import {
   Contact,
   MapPin,
   Calendar,
+  Coins,
+  Send,
+  MessageCircle,
 } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -29,6 +32,9 @@ const iconMap: Record<QRDataType, React.ElementType> = {
   vcard: Contact,
   location: MapPin,
   event: Calendar,
+  crypto: Coins,
+  telegram: Send,
+  whatsapp: MessageCircle,
 };
 
 export function TypeSelector() {

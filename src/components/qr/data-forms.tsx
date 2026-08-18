@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import type { QRDataType, QRDataForms } from '@/lib/qr-types';
+import { CRYPTO_CURRENCY_LABELS, type CryptoCurrency } from '@/lib/qr-types';
 
 export function DataForm() {
   const { dataType, formData, updateFormData } = useQRStore();
@@ -62,6 +63,24 @@ export function DataForm() {
         <EventForm
           value={formData.event}
           onChange={(v) => updateFormData('event', v)}
+        />
+      )}
+      {dataType === 'crypto' && (
+        <CryptoForm
+          value={formData.crypto}
+          onChange={(v) => updateFormData('crypto', v)}
+        />
+      )}
+      {dataType === 'telegram' && (
+        <TelegramForm
+          value={formData.telegram}
+          onChange={(v) => updateFormData('telegram', v)}
+        />
+      )}
+      {dataType === 'whatsapp' && (
+        <WhatsAppForm
+          value={formData.whatsapp}
+          onChange={(v) => updateFormData('whatsapp', v)}
         />
       )}
     </div>
@@ -366,16 +385,8 @@ function EventForm({
   value,
   onChange,
 }: {
-  value: {
-    title: string;
-    location: string;
-    startDate: string;
-    startTime: string;
-    endDate: string;
-    endTime: string;
-    description: string;
-  };
-  onChange: (v: any) => void;
+  value: QRDataForms['event'];
+  onChange: (v: QRDataForms['event']) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -433,6 +444,130 @@ function EventForm({
           rows={2}
         />
       </FormField>
+    </div>
+  );
+}
+
+function CryptoForm({
+  value,
+  onChange,
+}: {
+  value: QRDataForms['crypto'];
+  onChange: (v: QRDataForms['crypto']) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <FormField label="Валюта">
+        <Select
+          value={value.currency}
+          onValueChange={(v) => onChange({ ...value, currency: v as CryptoCurrency })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(CRYPTO_CURRENCY_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormField>
+      <FormField label="Адрес кошелька">
+        <Input
+          placeholder="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+          value={value.address}
+          onChange={(e) => onChange({ ...value, address: e.target.value })}
+          className="font-mono"
+        />
+      </FormField>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Сумма (опц.)">
+          <Input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="0.001"
+            value={value.amount}
+            onChange={(e) => onChange({ ...value, amount: e.target.value })}
+          />
+        </FormField>
+        <FormField label="Метка (опц.)">
+          <Input
+            placeholder="Пожертвование"
+            value={value.label}
+            onChange={(e) => onChange({ ...value, label: e.target.value })}
+          />
+        </FormField>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Код генерируется в формате BIP-21 (bitcoin:…, ethereum:…, tron:…) и
+        распознаётся криптокошельками.
+      </p>
+    </div>
+  );
+}
+
+function TelegramForm({
+  value,
+  onChange,
+}: {
+  value: QRDataForms['telegram'];
+  onChange: (v: QRDataForms['telegram']) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <FormField label="Имя пользователя">
+        <Input
+          placeholder="@username"
+          value={value.username}
+          onChange={(e) => onChange({ ...value, username: e.target.value })}
+        />
+      </FormField>
+      <FormField label="Текст сообщения (опц.)">
+        <Textarea
+          placeholder="Привет! Напиши мне в Telegram..."
+          value={value.text}
+          onChange={(e) => onChange({ ...value, text: e.target.value })}
+          rows={3}
+        />
+      </FormField>
+      <p className="text-xs text-muted-foreground">
+        Код откроет чат с пользователем в Telegram и подставит текст сообщения.
+      </p>
+    </div>
+  );
+}
+
+function WhatsAppForm({
+  value,
+  onChange,
+}: {
+  value: QRDataForms['whatsapp'];
+  onChange: (v: QRDataForms['whatsapp']) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <FormField label="Номер телефона">
+        <Input
+          type="tel"
+          placeholder="+79150000000"
+          value={value.phone}
+          onChange={(e) => onChange({ ...value, phone: e.target.value })}
+        />
+      </FormField>
+      <FormField label="Текст сообщения (опц.)">
+        <Textarea
+          placeholder="Здравствуйте! Пишу по поводу..."
+          value={value.message}
+          onChange={(e) => onChange({ ...value, message: e.target.value })}
+          rows={3}
+        />
+      </FormField>
+      <p className="text-xs text-muted-foreground">
+        Код откроет чат с номером в WhatsApp с готовым текстом сообщения.
+      </p>
     </div>
   );
 }

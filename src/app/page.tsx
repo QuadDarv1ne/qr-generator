@@ -9,6 +9,7 @@ import { SettingsPanel } from '@/components/qr/settings-panel';
 import { QRPreview } from '@/components/qr/qr-preview';
 import { QRDataPreview } from '@/components/qr/qr-data-preview';
 import { ExportPanel } from '@/components/qr/export-panel';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Accordion,
   AccordionContent,
@@ -28,7 +29,7 @@ import {
   MonitorSmartphone,
   ExternalLink,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 
 function FooterLink({ href, label }: { href: string; label: string }) {
   return (
@@ -44,7 +45,7 @@ function FooterLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
@@ -101,15 +102,16 @@ export default function QRGeneratorPage() {
             </div>
             <span className="font-bold text-lg tracking-tight">QR Generator</span>
           </div>
-          <div className="hidden sm:flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
+            <span className="hidden sm:flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5" />
               Бесплатно
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="hidden sm:flex items-center gap-1.5">
               <Shield className="h-3.5 w-3.5" />
               Без водяных знаков
             </span>
+            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -123,7 +125,7 @@ export default function QRGeneratorPage() {
               <span className="text-primary">QR-код генератор</span>
             </h1>
             <p className="mt-2 md:mt-3 text-muted-foreground text-sm md:text-lg leading-relaxed">
-              Уникальный дизайн, логотипы, градиенты, экспорт для печати. 9 типов данных, 8 форм точек.
+              Уникальный дизайн, логотипы, градиенты, экспорт для печати. 12 типов данных, 8 форм точек.
             </p>
           </div>
         </div>
@@ -295,8 +297,8 @@ export default function QRGeneratorPage() {
           >
             <FeatureCard
               icon={QrCode}
-              title="9 типов данных"
-              description="URL, текст, email, телефон, SMS, Wi-Fi, vCard, геолокация и события календаря."
+              title="12 типов данных"
+              description="URL, текст, email, телефон, SMS, Wi-Fi, vCard, геолокация, события, криптовалюта, Telegram и WhatsApp."
             />
             <FeatureCard
               icon={Palette}

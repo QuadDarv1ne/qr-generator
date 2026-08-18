@@ -3,11 +3,13 @@
 import { useRef } from 'react';
 import { useQRStore } from '@/lib/qr-store';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { Upload, X, ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function LogoPanel() {
-  const { logo, setLogo } = useQRStore();
+  const { logo, setLogo, logoSize, setLogoSize } = useQRStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,6 +92,26 @@ export function LogoPanel() {
               <X className="h-4 w-4" />
             </Button>
           </div>
+        </div>
+      )}
+      {logo.dataUrl && (
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <Label className="text-xs font-medium text-muted-foreground">
+              Размер логотипа
+            </Label>
+            <span className="text-xs text-muted-foreground font-mono">{logoSize}%</span>
+          </div>
+          <Slider
+            value={[logoSize]}
+            onValueChange={([v]) => setLogoSize(v)}
+            min={10}
+            max={40}
+            step={1}
+          />
+          <p className="text-xs text-muted-foreground">
+            Большой логотип снижает читаемость кода. Рекомендуется 15–25%.
+          </p>
         </div>
       )}
       <p className="text-xs text-muted-foreground">

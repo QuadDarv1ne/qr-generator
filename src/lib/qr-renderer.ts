@@ -10,6 +10,7 @@ export interface QRRenderOptions {
   eyeBall: EyeBallShape;
   errorCorrection: ErrorCorrectionLevel;
   logo?: string | null;
+  logoSize?: number;
   margin: number;
 }
 
@@ -286,7 +287,8 @@ function drawLogo(
   size: number,
   moduleCount: number,
   margin: number,
-  bgColor: string
+  bgColor: string,
+  logoSizePct = 22
 ) {
   // Skip if no valid logo data
   if (!logoDataUrl || logoDataUrl.trim() === '') {
@@ -297,7 +299,7 @@ function drawLogo(
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const logoModules = Math.floor(moduleCount * 0.22);
+      const logoModules = Math.floor(moduleCount * (logoSizePct / 100));
       const moduleSize = (size - margin * 2) / moduleCount;
       const logoSizePx = moduleSize * logoModules;
       const padding = logoSizePx * 0.15;
@@ -328,7 +330,7 @@ export async function renderQRToCanvas(
   canvas: HTMLCanvasElement,
   options: QRRenderOptions
 ): Promise<void> {
-  const { data, size, colors, dotShape, eyeFrame, eyeBall, errorCorrection, logo, margin } = options;
+  const { data, size, colors, dotShape, eyeFrame, eyeBall, errorCorrection, logo, margin, logoSize = 22 } = options;
 
   if (!data || data.length === 0) {
     canvas.width = size;
@@ -409,7 +411,7 @@ export async function renderQRToCanvas(
 
   // Draw logo
   if (logo) {
-    await drawLogo(ctx, logo, size, moduleCount, margin, colors.backgroundColor);
+    await drawLogo(ctx, logo, size, moduleCount, margin, colors.backgroundColor, logoSize);
   }
 }
 
@@ -430,4 +432,184 @@ export function getPrintPresetConfig(preset: string) {
     default:
       return { size: 1024, errorCorrection: 'M' as const };
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Pure vector SVG export (no raster embedded)                         */
+/* ------------------------------------------------------------------ */
+
+const num = (n: number) => (Math.round(n * 100) / 100).toString();
+
+function svgStarPoints(cx: number, cy: number, outerR: number, innerR: number, points: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const angle = (Math.PI * i) / points - Math.PI / 2;
+    pts.push(`${num(cx + Math.cos(angle) * r)},${num(cy + Math.sin(angle) * r)}`);
+  }
+  return pts.join(' ');
+}
+
+function svgDot(x: number, y: number, size: number, shape: DotShape, fill: string): string {
+  const gap = size * 0.08;
+  const ds = size - gap * 2;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const f = `fill="${fill}"`;
+
+  switch (shape) {
+    case 'square':
+      return `<rect x="${num(x + gap)}" y="${num(y + gap)}" width="${num(ds)}" height="${num(ds)}" ${f}/>`;
+    case 'rounded':
+      return `<rect x="${num(x + gap)}" y="${num(y + gap)}" width="${num(ds)}" height="${num(ds)}" rx="${num(ds * 0.25)}" ${f}/>`;
+    case 'dots':
+      return `<circle cx="${num(cx)}" cy="${num(cy)}" r="${num(ds / 2)}" ${f}/>`;
+    case 'classy':
+      return `<circle cx="${num(cx)}" cy="${num(cy)}" r="${num(ds * 0.42)}" ${f}/>`;
+    case 'classy-rounded':
+      return `<rect x="${num(x + gap)}" y="${num(y + gap)}" width="${num(ds)}" height="${num(ds)}" rx="${num(ds * 0.35)}" ${f}/>`;
+    case 'diamond':
+      return `<polygon points="${num(cx)},${num(y + gap)} ${num(x + gap + ds)},${num(cy)} ${num(cx)},${num(y + gap + ds)} ${num(x + gap)},${num(cy)}" ${f}/>`;
+    case 'star':
+      return `<polygon points="${svgStarPoints(cx, cy, ds / 2, ds / 4, 4)}" ${f}/>`;
+    case 'extra-rounded':
+      return `<rect x="${num(x + gap)}" y="${num(y + gap)}" width="${num(ds)}" height="${num(ds)}" rx="${num(ds * 0.5)}" ${f}/>`;
+  }
+}
+
+function svgEyeFrame(cx: number, cy: number, moduleSize: number, shape: EyeFrameShape, stroke: string): string {
+  const outerSize = moduleSize * 7;
+  const half = outerSize / 2;
+  const x = cx - half;
+  const y = cy - half;
+  const sw = `stroke="${stroke}" stroke-width="${num(moduleSize)}" stroke-linejoin="round" fill="none"`;
+
+  switch (shape) {
+    case 'square':
+      return `<rect x="${num(x + 0.5)}" y="${num(y + 0.5)}" width="${num(outerSize - 1)}" height="${num(outerSize - 1)}" ${sw}/>`;
+    case 'dot':
+    case 'circle':
+      return `<circle cx="${num(cx)}" cy="${num(cy)}" r="${num(half - moduleSize / 2)}" ${sw}/>`;
+    case 'rounded':
+      return `<rect x="${num(x)}" y="${num(y)}" width="${num(outerSize)}" height="${num(outerSize)}" rx="${num(outerSize * 0.12)}" ${sw}/>`;
+    case 'extra-rounded':
+      return `<rect x="${num(x)}" y="${num(y)}" width="${num(outerSize)}" height="${num(outerSize)}" rx="${num(outerSize * 0.35)}" ${sw}/>`;
+  }
+}
+
+function svgEyeBall(cx: number, cy: number, moduleSize: number, shape: EyeBallShape, fill: string): string {
+  const size = moduleSize * 3;
+  const half = size / 2;
+  const f = `fill="${fill}"`;
+
+  switch (shape) {
+    case 'square':
+      return `<rect x="${num(cx - half)}" y="${num(cy - half)}" width="${num(size)}" height="${num(size)}" ${f}/>`;
+    case 'dot':
+      return `<circle cx="${num(cx)}" cy="${num(cy)}" r="${num(half * 0.8)}" ${f}/>`;
+    case 'rounded':
+      return `<rect x="${num(cx - half)}" y="${num(cy - half)}" width="${num(size)}" height="${num(size)}" rx="${num(size * 0.2)}" ${f}/>`;
+    case 'circle':
+      return `<circle cx="${num(cx)}" cy="${num(cy)}" r="${num(half)}" ${f}/>`;
+  }
+}
+
+/**
+ * Generate a pure vector SVG string of the QR code (no raster embedded).
+ * The logo, if any, is embedded as an <image> element.
+ */
+export async function generateQRSVG(options: QRRenderOptions): Promise<string> {
+  const { data, size, colors, dotShape, eyeFrame, eyeBall, errorCorrection, logo, margin, logoSize = 22 } = options;
+
+  const parts: string[] = [];
+  parts.push(
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"` +
+      ` width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"` +
+      ` role="img" aria-label="QR-код">`
+  );
+
+  if (colors.mode === 'gradient') {
+    if (colors.gradientType === 'radial') {
+      parts.push(`<defs><radialGradient id="qrg" cx="50%" cy="50%" r="50%">`);
+    } else {
+      const angle = (colors.gradientRotation * Math.PI) / 180;
+      const len = size / 2;
+      const x1 = size / 2 - Math.cos(angle) * len;
+      const y1 = size / 2 - Math.sin(angle) * len;
+      const x2 = size / 2 + Math.cos(angle) * len;
+      const y2 = size / 2 + Math.sin(angle) * len;
+      parts.push(`<defs><linearGradient id="qrg" x1="${num(x1)}" y1="${num(y1)}" x2="${num(x2)}" y2="${num(y2)}">`);
+    }
+    parts.push(`<stop offset="0%" stop-color="${colors.gradientStartColor}"/>`);
+    parts.push(`<stop offset="100%" stop-color="${colors.gradientEndColor}"/>`);
+    parts.push(
+      `</${colors.gradientType === 'radial' ? 'radialGradient' : 'linearGradient'}></defs>`
+    );
+  }
+
+  parts.push(`<rect width="100%" height="100%" fill="${colors.backgroundColor}"/>`);
+
+  if (!data || data.length === 0) {
+    parts.push(
+      `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"` +
+        ` font-family="sans-serif" font-size="${num(size * 0.04)}" fill="#999999">Введите данные для QR-кода</text>`
+    );
+    parts.push('</svg>');
+    return parts.join('\n');
+  }
+
+  const { data2d, moduleCount } = await generateQRMatrix(data, errorCorrection);
+  const moduleSize = (size - margin * 2) / moduleCount;
+  const finders = getFinderPositions(moduleCount);
+  const gradRef = colors.mode === 'gradient' ? 'url(#qrg)' : '';
+
+  const fillFor = (row: number, col: number): string => {
+    if (colors.mode === 'gradient') return gradRef;
+    if (colors.useSeparateDotColor && !isFinderZone(row, col, moduleCount)) return colors.dotColor;
+    return colors.foregroundColor;
+  };
+
+  // Data modules (non-finder zones)
+  for (let r = 0; r < moduleCount; r++) {
+    for (let c = 0; c < moduleCount; c++) {
+      if (isFinderZone(r, c, moduleCount)) continue;
+      if (!data2d[r][c]) continue;
+      const x = margin + c * moduleSize;
+      const y = margin + r * moduleSize;
+      parts.push(svgDot(x, y, moduleSize, dotShape, fillFor(r, c)));
+    }
+  }
+
+  // Finder patterns
+  for (const f of finders) {
+    const cx = margin + (f.col + 3.5) * moduleSize;
+    const cy = margin + (f.row + 3.5) * moduleSize;
+    const frameColor = colors.mode === 'gradient' ? colors.gradientStartColor : colors.foregroundColor;
+    const ballColor = colors.mode === 'gradient' ? colors.gradientEndColor : colors.foregroundColor;
+    parts.push(svgEyeFrame(cx, cy, moduleSize, eyeFrame, frameColor));
+    parts.push(svgEyeBall(cx, cy, moduleSize, eyeBall, ballColor));
+  }
+
+  // Logo
+  if (logo && logo.trim() !== '') {
+    const logoModules = Math.floor(moduleCount * (logoSize / 100));
+    const logoSizePx = moduleSize * logoModules;
+    const padding = logoSizePx * 0.15;
+    const x = (size - logoSizePx) / 2;
+    const y = (size - logoSizePx) / 2;
+    const bgRadius = logoSizePx * 0.18;
+    parts.push(
+      `<rect x="${num(x - padding)}" y="${num(y - padding)}" width="${num(logoSizePx + padding * 2)}"` +
+        ` height="${num(logoSizePx + padding * 2)}" rx="${num(bgRadius)}" fill="${colors.backgroundColor}"/>`
+    );
+    parts.push(`<clipPath id="qrc"><rect x="${num(x)}" y="${num(y)}" width="${num(logoSizePx)}"` +
+      ` height="${num(logoSizePx)}" rx="${num(bgRadius * 0.7)}"/></clipPath>`);
+    parts.push(
+      `<image clip-path="url(#qrc)" x="${num(x)}" y="${num(y)}" width="${num(logoSizePx)}"` +
+        ` height="${num(logoSizePx)}" href="${logo}" xlink:href="${logo}" preserveAspectRatio="none"/>`
+    );
+  }
+
+  parts.push('</svg>');
+  return parts.join('\n');
 }

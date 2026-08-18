@@ -3,7 +3,7 @@ import type { QRDataType, QRDataForms, ErrorCorrectionLevel } from './qr-types';
 export function encodeQRData(type: QRDataType, data: QRDataForms): string {
   switch (type) {
     case 'url':
-      return data.url || 'https://example.com';
+      return normalizeUrl(data.url);
     case 'text':
       return data.text || 'Привет, мир!';
     case 'email':
@@ -11,7 +11,7 @@ export function encodeQRData(type: QRDataType, data: QRDataForms): string {
     case 'phone':
       return `tel:${data.phone || '+79991234567'}`;
     case 'sms':
-      return `sms:${data.sms.phone || ''}?body=${encodeURIComponent(data.sms.message || '')}`;
+      return encodeSms(data.sms);
     case 'wifi':
       return encodeWifi(data.wifi);
     case 'vcard':
@@ -20,9 +20,26 @@ export function encodeQRData(type: QRDataType, data: QRDataForms): string {
       return encodeLocation(data.location);
     case 'event':
       return encodeEvent(data.event);
+    case 'crypto':
+      return encodeCrypto(data.crypto);
+    case 'telegram':
+      return encodeTelegram(data.telegram);
+    case 'whatsapp':
+      return encodeWhatsApp(data.whatsapp);
     default:
       return '';
   }
+}
+
+/** Add https:// prefix if the URL has no scheme (e.g. "example.com" -> "https://example.com") */
+export function normalizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) return trimmed;
+  if (/^(mailto|tel|sms|geo|bitcoin|ethereum|tron|litecoin|dogecoin|bitcoincash|tg|wtai):/i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
 }
 
 /**
@@ -68,6 +85,13 @@ function encodeEmail(e: QRDataForms['email']): string {
   return `mailto:${e.to}${query}`;
 }
 
+function encodeSms(s: QRDataForms['sms']): string {
+  const phone = s.phone.trim();
+  const body = encodeURIComponent(s.message || '');
+  if (phone) return `sms:${phone}?body=${body}`;
+  return `sms:?body=${body}`;
+}
+
 function encodeWifi(w: QRDataForms['wifi']): string {
   const hidden = w.hidden ? 'H:true' : '';
   const parts = [
@@ -84,7 +108,7 @@ function encodeVCard(v: QRDataForms['vcard']): string {
     'BEGIN:VCARD',
     'VERSION:3.0',
   ];
-  
+
   // Handle name fields
   const hasName = v.firstName || v.lastName;
   if (hasName) {
@@ -92,7 +116,7 @@ function encodeVCard(v: QRDataForms['vcard']): string {
     lines.push(`N:${v.lastName || ''};${v.firstName || ''};;;`);
     lines.push(`FN:${fullName}`);
   }
-  
+
   if (v.organization) lines.push(`ORG:${v.organization}`);
   if (v.title) lines.push(`TITLE:${v.title}`);
   if (v.phone) lines.push(`TEL;TYPE=CELL:${v.phone}`);
@@ -113,9 +137,9 @@ function encodeLocation(loc: QRDataForms['location']): string {
 
 function encodeEvent(ev: QRDataForms['event']): string {
   const fmtDate = (d: string, t: string): string => {
-    if (!d) return '20250101T090000';
-    const dt = t ? `${d}T${t}` : `${d}T090000`;
-    return dt.replace(/[-:]/g, '');
+    const date = d || new Date().toISOString().slice(0, 10);
+    const time = t || '09:00';
+    return `${date}T${time}`.replace(/[-:]/g, '');
   };
   const start = fmtDate(ev.startDate, ev.startTime);
   const end = fmtDate(ev.endDate, ev.endTime);
@@ -129,4 +153,37 @@ function encodeEvent(ev: QRDataForms['event']): string {
   if (ev.description) lines.push(`DESCRIPTION:${ev.description}`);
   lines.push('END:VEVENT');
   return lines.join('\n');
+}
+
+const CRYPTO_SCHEMES: Record<QRDataForms['crypto']['currency'], string> = {
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  USDT: 'tron',
+  LTC: 'litecoin',
+  DOGE: 'dogecoin',
+  BCH: 'bitcoincash',
+};
+
+function encodeCrypto(c: QRDataForms['crypto']): string {
+  const address = c.address.trim();
+  if (!address) return '';
+  let result = `${CRYPTO_SCHEMES[c.currency]}:${address}`;
+  const params: string[] = [];
+  if (c.amount) params.push(`amount=${c.amount}`);
+  if (c.label) params.push(`label=${encodeURIComponent(c.label)}`);
+  if (params.length) result += `?${params.join('&')}`;
+  return result;
+}
+
+function encodeTelegram(t: QRDataForms['telegram']): string {
+  const username = t.username.trim().replace(/^@/, '');
+  if (!username) return 'https://t.me/';
+  const params = t.text ? `?text=${encodeURIComponent(t.text)}` : '';
+  return `https://t.me/${username}${params}`;
+}
+
+function encodeWhatsApp(w: QRDataForms['whatsapp']): string {
+  const phone = w.phone.replace(/\D/g, '');
+  const params = w.message ? `?text=${encodeURIComponent(w.message)}` : '';
+  return `https://wa.me/${phone}${params}`;
 }
