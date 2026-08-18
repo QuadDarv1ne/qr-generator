@@ -14,6 +14,26 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
+interface ColorPreset {
+  name: string;
+  mode: 'solid' | 'gradient';
+  foregroundColor?: string;
+  backgroundColor?: string;
+  gradientStartColor?: string;
+  gradientEndColor?: string;
+}
+
+const COLOR_PRESETS: ColorPreset[] = [
+  { name: 'Классический', mode: 'solid', foregroundColor: '#000000', backgroundColor: '#FFFFFF' },
+  { name: 'Индиго', mode: 'solid', foregroundColor: '#4F46E5', backgroundColor: '#FFFFFF' },
+  { name: 'Изумруд', mode: 'solid', foregroundColor: '#059669', backgroundColor: '#FFFFFF' },
+  { name: 'Гранат', mode: 'solid', foregroundColor: '#DC2626', backgroundColor: '#FFFFFF' },
+  { name: 'Графит', mode: 'solid', foregroundColor: '#111827', backgroundColor: '#F3F4F6' },
+  { name: 'Ночь', mode: 'solid', foregroundColor: '#F8FAFC', backgroundColor: '#0F172A' },
+  { name: 'Закат', mode: 'gradient', gradientStartColor: '#F97316', gradientEndColor: '#7C3AED' },
+  { name: 'Океан', mode: 'gradient', gradientStartColor: '#06B6D4', gradientEndColor: '#8B5CF6' },
+];
+
 function ColorPicker({
   label,
   value,
@@ -49,8 +69,52 @@ function ColorPicker({
 export function ColorPanel() {
   const { colors, updateColors } = useQRStore();
 
+  const applyPreset = (preset: ColorPreset) => {
+    if (preset.mode === 'solid') {
+      updateColors({
+        mode: 'solid',
+        foregroundColor: preset.foregroundColor!,
+        backgroundColor: preset.backgroundColor!,
+      });
+    } else {
+      updateColors({
+        mode: 'gradient',
+        gradientStartColor: preset.gradientStartColor!,
+        gradientEndColor: preset.gradientEndColor!,
+      });
+    }
+  };
+
   return (
     <div className="space-y-5">
+      {/* Presets */}
+      <div className="space-y-2">
+        <Label className="text-xs font-medium text-muted-foreground">Готовые схемы</Label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {COLOR_PRESETS.map((preset) => (
+            <button
+              key={preset.name}
+              onClick={() => applyPreset(preset)}
+              title={preset.name}
+              className="group flex flex-col items-center gap-1 p-1.5 rounded-lg border border-border hover:border-primary/40 hover:bg-accent/50 transition-all"
+            >
+              <span
+                className="w-full h-5 rounded-md border border-border/60"
+                style={{
+                  background:
+                    preset.mode === 'gradient'
+                      ? `linear-gradient(135deg, ${preset.gradientStartColor}, ${preset.gradientEndColor})`
+                      : preset.foregroundColor,
+                }}
+              />
+              <span className="text-[10px] leading-tight text-center text-muted-foreground group-hover:text-foreground transition-colors">
+                {preset.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Mode toggle */}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium text-muted-foreground">Режим цвета</Label>
@@ -87,11 +151,6 @@ export function ColorPanel() {
             value={colors.foregroundColor}
             onChange={(foregroundColor) => updateColors({ foregroundColor })}
           />
-          <ColorPicker
-            label="Цвет фона"
-            value={colors.backgroundColor}
-            onChange={(backgroundColor) => updateColors({ backgroundColor })}
-          />
           <div className="flex items-center justify-between">
             <Label className="text-sm font-medium">Отдельный цвет точек</Label>
             <Switch
@@ -107,6 +166,29 @@ export function ColorPanel() {
               value={colors.dotColor}
               onChange={(dotColor) => updateColors({ dotColor })}
             />
+          )}
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">Отдельный цвет глаз</Label>
+            <Switch
+              checked={colors.useSeparateEyeColor}
+              onCheckedChange={(useSeparateEyeColor) =>
+                updateColors({ useSeparateEyeColor })
+              }
+            />
+          </div>
+          {colors.useSeparateEyeColor && (
+            <div className="grid grid-cols-2 gap-3">
+              <ColorPicker
+                label="Рамка глаз"
+                value={colors.eyeFrameColor}
+                onChange={(eyeFrameColor) => updateColors({ eyeFrameColor })}
+              />
+              <ColorPicker
+                label="Ядро глаз"
+                value={colors.eyeBallColor}
+                onChange={(eyeBallColor) => updateColors({ eyeBallColor })}
+              />
+            </div>
           )}
         </>
       ) : (
@@ -124,11 +206,6 @@ export function ColorPanel() {
             onChange={(gradientEndColor) =>
               updateColors({ gradientEndColor })
             }
-          />
-          <ColorPicker
-            label="Цвет фона"
-            value={colors.backgroundColor}
-            onChange={(backgroundColor) => updateColors({ backgroundColor })}
           />
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">
@@ -170,6 +247,27 @@ export function ColorPanel() {
           )}
         </>
       )}
+
+      {/* Background */}
+      <ColorPicker
+        label="Цвет фона"
+        value={colors.backgroundColor}
+        onChange={(backgroundColor) => updateColors({ backgroundColor })}
+      />
+      <div className="flex items-center justify-between">
+        <div>
+          <Label className="text-sm font-medium">Прозрачный фон</Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Подходит для наклеек и оверлеев на изображения
+          </p>
+        </div>
+        <Switch
+          checked={colors.transparentBackground}
+          onCheckedChange={(transparentBackground) =>
+            updateColors({ transparentBackground })
+          }
+        />
+      </div>
     </div>
   );
 }

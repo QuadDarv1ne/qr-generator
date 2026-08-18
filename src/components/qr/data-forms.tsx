@@ -1,6 +1,7 @@
 'use client';
 
 import { useQRStore } from '@/lib/qr-store';
+import { validateEventDates } from '@/lib/qr-encoders';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -444,6 +445,9 @@ function EventForm({
           rows={2}
         />
       </FormField>
+      {validateEventDates(value) && (
+        <p className="text-xs text-destructive">{validateEventDates(value)}</p>
+      )}
     </div>
   );
 }

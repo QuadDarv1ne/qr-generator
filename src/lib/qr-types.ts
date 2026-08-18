@@ -68,6 +68,10 @@ export interface QRColorSettings {
   gradientRotation: number;
   useSeparateDotColor: boolean;
   dotColor: string;
+  transparentBackground: boolean;
+  useSeparateEyeColor: boolean;
+  eyeFrameColor: string;
+  eyeBallColor: string;
 }
 
 export type DotShape =

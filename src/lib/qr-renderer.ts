@@ -337,8 +337,10 @@ export async function renderQRToCanvas(
     canvas.height = size;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Не удалось получить контекст canvas');
-    ctx.fillStyle = colors.backgroundColor;
-    ctx.fillRect(0, 0, size, size);
+    if (!colors.transparentBackground) {
+      ctx.fillStyle = colors.backgroundColor;
+      ctx.fillRect(0, 0, size, size);
+    }
     ctx.fillStyle = '#999999';
     ctx.font = `${Math.round(size * 0.04)}px sans-serif`;
     ctx.textAlign = 'center';
@@ -353,9 +355,11 @@ export async function renderQRToCanvas(
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
-  // Background
-  ctx.fillStyle = colors.backgroundColor;
-  ctx.fillRect(0, 0, size, size);
+  // Background (skipped when transparent)
+  if (!colors.transparentBackground) {
+    ctx.fillStyle = colors.backgroundColor;
+    ctx.fillRect(0, 0, size, size);
+  }
 
   const moduleSize = (size - margin * 2) / moduleCount;
   const finders = getFinderPositions(moduleCount);
@@ -389,23 +393,26 @@ export async function renderQRToCanvas(
   }
 
   // Draw finder patterns
+  const frameColor =
+    colors.mode === 'gradient'
+      ? colors.gradientStartColor
+      : colors.useSeparateEyeColor
+        ? colors.eyeFrameColor
+        : colors.foregroundColor;
+  const ballColor =
+    colors.mode === 'gradient'
+      ? colors.gradientEndColor
+      : colors.useSeparateEyeColor
+        ? colors.eyeBallColor
+        : colors.foregroundColor;
+
   for (let i = 0; i < finders.length; i++) {
     const fc = finderCenters[i];
 
-    // Eye frame color
-    if (colors.mode === 'gradient') {
-      ctx.fillStyle = colors.gradientStartColor;
-    } else {
-      ctx.fillStyle = colors.foregroundColor;
-    }
+    ctx.fillStyle = frameColor;
     drawEyeFrame(ctx, fc.cx, fc.cy, moduleSize, eyeFrame);
 
-    // Eye ball color
-    if (colors.mode === 'gradient') {
-      ctx.fillStyle = colors.gradientEndColor;
-    } else {
-      ctx.fillStyle = colors.foregroundColor;
-    }
+    ctx.fillStyle = ballColor;
     drawEyeBall(ctx, fc.cx, fc.cy, moduleSize, eyeBall);
   }
 
@@ -547,7 +554,9 @@ export async function generateQRSVG(options: QRRenderOptions): Promise<string> {
     );
   }
 
-  parts.push(`<rect width="100%" height="100%" fill="${colors.backgroundColor}"/>`);
+  if (!colors.transparentBackground) {
+    parts.push(`<rect width="100%" height="100%" fill="${colors.backgroundColor}"/>`);
+  }
 
   if (!data || data.length === 0) {
     parts.push(
@@ -581,13 +590,24 @@ export async function generateQRSVG(options: QRRenderOptions): Promise<string> {
   }
 
   // Finder patterns
+  const eyeFrameColor =
+    colors.mode === 'gradient'
+      ? colors.gradientStartColor
+      : colors.useSeparateEyeColor
+        ? colors.eyeFrameColor
+        : colors.foregroundColor;
+  const eyeBallColor =
+    colors.mode === 'gradient'
+      ? colors.gradientEndColor
+      : colors.useSeparateEyeColor
+        ? colors.eyeBallColor
+        : colors.foregroundColor;
+
   for (const f of finders) {
     const cx = margin + (f.col + 3.5) * moduleSize;
     const cy = margin + (f.row + 3.5) * moduleSize;
-    const frameColor = colors.mode === 'gradient' ? colors.gradientStartColor : colors.foregroundColor;
-    const ballColor = colors.mode === 'gradient' ? colors.gradientEndColor : colors.foregroundColor;
-    parts.push(svgEyeFrame(cx, cy, moduleSize, eyeFrame, frameColor));
-    parts.push(svgEyeBall(cx, cy, moduleSize, eyeBall, ballColor));
+    parts.push(svgEyeFrame(cx, cy, moduleSize, eyeFrame, eyeFrameColor));
+    parts.push(svgEyeBall(cx, cy, moduleSize, eyeBall, eyeBallColor));
   }
 
   // Logo

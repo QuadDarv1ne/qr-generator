@@ -149,7 +149,9 @@ export function ExportPanel() {
       const a = document.createElement('a');
       a.href = url;
       a.download = `qrcode-${Date.now()}.png`;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       URL.revokeObjectURL(url);
       toast.success('PNG успешно сохранён');
     } catch {

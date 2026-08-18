@@ -6,6 +6,7 @@ import { ColorPanel } from '@/components/qr/color-panel';
 import { LogoPanel } from '@/components/qr/logo-panel';
 import { DesignPanel } from '@/components/qr/design-panel';
 import { SettingsPanel } from '@/components/qr/settings-panel';
+import { BatchPanel } from '@/components/qr/batch-panel';
 import { QRPreview } from '@/components/qr/qr-preview';
 import { QRDataPreview } from '@/components/qr/qr-data-preview';
 import { ExportPanel } from '@/components/qr/export-panel';
@@ -28,6 +29,7 @@ import {
   Shield,
   MonitorSmartphone,
   ExternalLink,
+  Layers,
 } from 'lucide-react';
 import { motion, type Variants } from 'framer-motion';
 
@@ -241,6 +243,18 @@ export default function QRGeneratorPage() {
                     </AccordionTrigger>
                     <AccordionContent className="pb-4 md:pb-5">
                       <SettingsPanel />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="batch" className="border-border px-4 md:px-5">
+                    <AccordionTrigger className="py-3.5 md:py-4 hover:no-underline">
+                      <div className="flex items-center gap-2">
+                        <Layers className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-sm md:text-base">Пакетная генерация</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-4 md:pb-5">
+                      <BatchPanel />
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>

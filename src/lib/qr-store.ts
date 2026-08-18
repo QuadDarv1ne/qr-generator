@@ -98,6 +98,10 @@ const defaultColors: QRColorSettings = {
   gradientRotation: 0,
   useSeparateDotColor: false,
   dotColor: '#000000',
+  transparentBackground: false,
+  useSeparateEyeColor: false,
+  eyeFrameColor: '#000000',
+  eyeBallColor: '#000000',
 };
 
 const initialState = {

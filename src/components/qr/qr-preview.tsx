@@ -147,7 +147,7 @@ export function QRPreview() {
           </div>
         )}
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-xl">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/90 rounded-xl">
             <p className="text-xs text-destructive text-center px-4">{error}</p>
           </div>
         )}

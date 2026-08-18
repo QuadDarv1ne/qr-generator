@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateQRSVG } from '@/lib/qr-renderer';
+import { validateQRData } from '@/lib/qr-encoders';
 import type {
   DotShape,
   EyeFrameShape,
@@ -31,7 +32,7 @@ const intParam = (sp: URLSearchParams, name: string, fallback: number, min: numb
 /**
  * GET /api/qr?data=...&size=1024&foreground=#000000&background=#FFFFFF
  *     &dotShape=square&eyeFrame=square&eyeBall=square&ec=M&mode=solid
- *     &gradientStart=...&gradientEnd=...&gradientRotation=45&margin=8
+ *     &gradientStart=...&gradientEnd=...&gradientRotation=45&margin=8&transparent=0
  *
  * Returns a pure vector SVG of the QR code (no raster embedded).
  */
@@ -58,6 +59,12 @@ export async function GET(request: NextRequest) {
   const gradientStart = isHexColor(sp.get('gradientStart')) ? sp.get('gradientStart')! : '#000000';
   const gradientEnd = isHexColor(sp.get('gradientEnd')) ? sp.get('gradientEnd')! : '#4F46E5';
 
+  // Data capacity check for the given error correction level
+  const capacityError = validateQRData(data, ec);
+  if (capacityError) {
+    return NextResponse.json({ error: capacityError }, { status: 400 });
+  }
+
   try {
     const svg = await generateQRSVG({
       data,
@@ -72,6 +79,10 @@ export async function GET(request: NextRequest) {
         gradientRotation,
         useSeparateDotColor: false,
         dotColor: '#000000',
+        transparentBackground: sp.get('transparent') === '1',
+        useSeparateEyeColor: false,
+        eyeFrameColor: '#000000',
+        eyeBallColor: '#000000',
       },
       dotShape: pick(DOT_SHAPES, sp.get('dotShape'), 'square'),
       eyeFrame: pick(EYE_FRAMES, sp.get('eyeFrame'), 'square'),

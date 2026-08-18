@@ -92,18 +92,36 @@ function encodeSms(s: QRDataForms['sms']): string {
   return `sms:?body=${body}`;
 }
 
+/**
+ * Escape special characters per the WIFI: scheme spec:
+ * `\`, `;`, `,`, `:` and `"` must be prefixed with a backslash.
+ */
+function escapeWifiValue(value: string): string {
+  return value.replace(/([\\;,":])/g, '\\$1');
+}
+
 function encodeWifi(w: QRDataForms['wifi']): string {
   const hidden = w.hidden ? 'H:true' : '';
   const parts = [
     `T:${w.encryption}`,
-    `S:${w.ssid || 'Unnamed'}`,
-    w.encryption !== 'NOPASS' ? `P:${w.password}` : '',
+    `S:${escapeWifiValue(w.ssid || 'Unnamed')}`,
+    w.encryption !== 'NOPASS' ? `P:${escapeWifiValue(w.password)}` : '',
     hidden,
   ].filter(Boolean);
   return `WIFI:${parts.join(';')};;;`;
 }
 
+/** Escape values per the vCard 3.0 spec: `\`, `;`, `,` and newlines */
+function escapeVCardValue(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
 function encodeVCard(v: QRDataForms['vcard']): string {
+  const esc = escapeVCardValue;
   const lines = [
     'BEGIN:VCARD',
     'VERSION:3.0',
@@ -112,20 +130,37 @@ function encodeVCard(v: QRDataForms['vcard']): string {
   // Handle name fields
   const hasName = v.firstName || v.lastName;
   if (hasName) {
-    const fullName = [v.firstName, v.lastName].filter(Boolean).join(' ').trim();
-    lines.push(`N:${v.lastName || ''};${v.firstName || ''};;;`);
+    const fullName = esc([v.firstName, v.lastName].filter(Boolean).join(' ').trim());
+    lines.push(`N:${esc(v.lastName || '')};${esc(v.firstName || '')};;;`);
     lines.push(`FN:${fullName}`);
   }
 
-  if (v.organization) lines.push(`ORG:${v.organization}`);
-  if (v.title) lines.push(`TITLE:${v.title}`);
-  if (v.phone) lines.push(`TEL;TYPE=CELL:${v.phone}`);
-  if (v.email) lines.push(`EMAIL:${v.email}`);
-  if (v.url) lines.push(`URL:${v.url}`);
-  if (v.address) lines.push(`ADR:;;${v.address};;;;`);
-  if (v.note) lines.push(`NOTE:${v.note}`);
+  if (v.organization) lines.push(`ORG:${esc(v.organization)}`);
+  if (v.title) lines.push(`TITLE:${esc(v.title)}`);
+  if (v.phone) lines.push(`TEL;TYPE=CELL:${esc(v.phone)}`);
+  if (v.email) lines.push(`EMAIL:${esc(v.email)}`);
+  if (v.url) lines.push(`URL:${esc(v.url)}`);
+  if (v.address) lines.push(`ADR:;;${esc(v.address)};;;;`);
+  if (v.note) lines.push(`NOTE:${esc(v.note)}`);
   lines.push('END:VCARD');
   return lines.join('\n');
+}
+
+/**
+ * Validate event dates: returns an error message or null.
+ * Checks that the end date/time is not before the start date/time.
+ */
+export function validateEventDates(ev: QRDataForms['event']): string | null {
+  const startDate = ev.startDate;
+  const endDate = ev.endDate;
+  if (!startDate || !endDate) return null;
+  const start = new Date(`${startDate}T${ev.startTime || '00:00'}`);
+  const end = new Date(`${endDate}T${ev.endTime || '00:00'}`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  if (end < start) {
+    return 'Дата окончания раньше даты начала';
+  }
+  return null;
 }
 
 function encodeLocation(loc: QRDataForms['location']): string {
