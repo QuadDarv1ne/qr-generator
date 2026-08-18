@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import type { QRDataType, QRDataForms } from '@/lib/qr-types';
 import { CRYPTO_CURRENCY_LABELS, type CryptoCurrency } from '@/lib/qr-types';
 
@@ -117,6 +118,11 @@ function UrlForm({ value, onChange }: { value: string; onChange: (v: string) => 
 }
 
 function TextForm({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const charCount = value.length;
+  const maxChars = 2000; // Reasonable limit for QR codes
+  const isNearLimit = charCount > maxChars * 0.9;
+  const isOverLimit = charCount > maxChars;
+
   return (
     <FormField label="Текст">
       <Textarea
@@ -124,7 +130,18 @@ function TextForm({ value, onChange }: { value: string; onChange: (v: string) =>
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={4}
+        className="resize-none"
+        maxLength={maxChars}
+        aria-describedby="text-char-count"
       />
+      <div id="text-char-count" className="flex justify-between text-xs text-muted-foreground mt-1">
+        <span>Максимум {maxChars} символов</span>
+        <span className={cn(
+          isOverLimit ? 'text-destructive font-medium' : isNearLimit ? 'text-amber-500' : ''
+        )}>
+          {charCount}/{maxChars}
+        </span>
+      </div>
     </FormField>
   );
 }

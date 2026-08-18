@@ -67,6 +67,13 @@ export async function POST(request: NextRequest) {
     gradientStart: hexColor('#000000'),
     gradientEnd: hexColor('#4F46E5'),
     gradientRotation: z.number().min(0).max(360).default(0),
+    // Separate dot color
+    useSeparateDotColor: z.boolean().default(false),
+    dotColor: hexColor('#000000'),
+    // Separate eye colors
+    useSeparateEyeColor: z.boolean().default(false),
+    eyeFrameColor: hexColor('#000000'),
+    eyeBallColor: hexColor('#000000'),
     dotShape: z.enum(DOT_SHAPES).default('square'),
     eyeFrame: z.enum(EYE_FRAMES).default('square'),
     eyeBall: z.enum(EYE_BALLS).default('square'),
@@ -107,12 +114,12 @@ export async function POST(request: NextRequest) {
         gradientStartColor: p.gradientStart,
         gradientEndColor: p.gradientEnd,
         gradientRotation: p.gradientRotation,
-        useSeparateDotColor: false,
-        dotColor: '#000000',
+        useSeparateDotColor: p.useSeparateDotColor,
+        dotColor: p.dotColor,
         transparentBackground: p.transparent,
-        useSeparateEyeColor: false,
-        eyeFrameColor: '#000000',
-        eyeBallColor: '#000000',
+        useSeparateEyeColor: p.useSeparateEyeColor,
+        eyeFrameColor: p.eyeFrameColor,
+        eyeBallColor: p.eyeBallColor,
       },
       dotShape: p.dotShape,
       eyeFrame: p.eyeFrame,
@@ -144,6 +151,8 @@ export async function POST(request: NextRequest) {
  *     &dotShape=square&eyeFrame=square&eyeBall=square&ec=M&mode=solid
  *     &gradientStart=...&gradientEnd=...&gradientRotation=45&margin=8&transparent=0
  *     &logoSize=22&logoShape=rounded
+ *     &useSeparateDotColor=1&dotColor=#FF0000
+ *     &useSeparateEyeColor=1&eyeFrameColor=#0000FF&eyeBallColor=#00FF00
  *
  * Возвращает векторный SVG QR-кода. Для логотипа и больших данных используйте POST.
  */
@@ -169,6 +178,11 @@ export async function GET(request: NextRequest) {
   const background = isHexColor(sp.get('background')) ? sp.get('background')! : '#FFFFFF';
   const gradientStart = isHexColor(sp.get('gradientStart')) ? sp.get('gradientStart')! : '#000000';
   const gradientEnd = isHexColor(sp.get('gradientEnd')) ? sp.get('gradientEnd')! : '#4F46E5';
+  const dotColor = isHexColor(sp.get('dotColor')) ? sp.get('dotColor')! : '#000000';
+  const eyeFrameColor = isHexColor(sp.get('eyeFrameColor')) ? sp.get('eyeFrameColor')! : '#000000';
+  const eyeBallColor = isHexColor(sp.get('eyeBallColor')) ? sp.get('eyeBallColor')! : '#000000';
+  const useSeparateDotColor = sp.get('useSeparateDotColor') === '1';
+  const useSeparateEyeColor = sp.get('useSeparateEyeColor') === '1';
 
   // Data capacity check for the given error correction level
   const capacityError = validateQRData(data, ec);
@@ -188,12 +202,12 @@ export async function GET(request: NextRequest) {
         gradientStartColor: gradientStart,
         gradientEndColor: gradientEnd,
         gradientRotation,
-        useSeparateDotColor: false,
-        dotColor: '#000000',
+        useSeparateDotColor,
+        dotColor,
         transparentBackground: sp.get('transparent') === '1',
-        useSeparateEyeColor: false,
-        eyeFrameColor: '#000000',
-        eyeBallColor: '#000000',
+        useSeparateEyeColor,
+        eyeFrameColor,
+        eyeBallColor,
       },
       dotShape: pick(DOT_SHAPES, sp.get('dotShape'), 'square'),
       eyeFrame: pick(EYE_FRAMES, sp.get('eyeFrame'), 'square'),

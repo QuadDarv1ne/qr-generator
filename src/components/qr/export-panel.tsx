@@ -5,7 +5,7 @@ import { useQRStore } from '@/lib/qr-store';
 import { encodeQRData, validateQRData } from '@/lib/qr-encoders';
 import { renderQRToCanvas, generateQRSVG, getPrintPresetConfig } from '@/lib/qr-renderer';
 import { Button } from '@/components/ui/button';
-import { Download, FileImage, FileText, Loader2, Copy, RotateCcw, Check } from 'lucide-react';
+import { Download, FileImage, FileText, Loader2, Copy, RotateCcw, Check, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Select,
@@ -231,6 +231,48 @@ export function ExportPanel() {
 
   const isExporting = !!exporting;
 
+  const shareQR = async () => {
+    const err = validate();
+    if (err) { toast.error(err); return; }
+
+    // Check if Web Share API is available
+    if (!navigator.share) {
+      toast.error('Функция "Поделиться" не поддерживается вашим браузером');
+      return;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      const opts = getExportOptions();
+      opts.size = 1024;
+      opts.margin = 1024 * (margin / 100);
+      await renderQRToCanvas(canvas, opts);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/png')
+      );
+      if (!blob) {
+        toast.error('Не удалось создать изображение');
+        return;
+      }
+
+      const file = new File([blob], `qrcode-${Date.now()}.png`, { type: 'image/png' });
+      const data = getDataString();
+      
+      await navigator.share({
+        title: 'QR-код',
+        text: data.length > 200 ? data.slice(0, 200) + '...' : data,
+        files: [file],
+      });
+      toast.success('QR-код отправлен');
+    } catch (error) {
+      // User cancelled or share failed
+      if ((error as Error).name !== 'AbortError') {
+        toast.error('Не удалось поделиться');
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col gap-3 w-full">
         {/* Main PNG button */}
@@ -310,6 +352,18 @@ export function ExportPanel() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Share button */}
+        <Button
+          onClick={shareQR}
+          disabled={isExporting}
+          variant="outline"
+          size="lg"
+          className="w-full"
+        >
+          <Share2 className="h-4 w-4 mr-2" />
+          Поделиться
+        </Button>
 
         {/* Reset button */}
         <Button
