@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { useQRStore } from '@/lib/qr-store';
-import { encodeQRData } from '@/lib/qr-encoders';
+import { encodeQRData, validateQRData } from '@/lib/qr-encoders';
 import { renderQRToCanvas, getPrintPresetConfig } from '@/lib/qr-renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileImage, FileText, Loader2, Copy, RotateCcw, Check } from 'lucide-react';
@@ -67,12 +67,8 @@ export function ExportPanel() {
 
   const validate = (): string | null => {
     const data = getDataString();
-    if (!data || data.length < 2) {
-      return 'Введите данные для генерации QR-кода';
-    }
-    if (data.length > 2953) {
-      return 'Слишком много данных. QR-код не может содержать более ~2953 символов.';
-    }
+    const err = validateQRData(data, errorCorrection);
+    if (err) return err;
     return null;
   };
 
@@ -104,38 +100,7 @@ export function ExportPanel() {
   };
 
   const resetAll = () => {
-    useQRStore.setState({
-      dataType: 'url',
-      formData: {
-        url: 'https://example.com',
-        text: '',
-        email: { to: '', subject: '', body: '' },
-        phone: '',
-        sms: { phone: '', message: '' },
-        wifi: { ssid: '', password: '', encryption: 'WPA', hidden: false },
-        vcard: { firstName: '', lastName: '', phone: '', email: '', organization: '', title: '', url: '', address: '', note: '' },
-        location: { latitude: '', longitude: '', query: '' },
-        event: { title: '', location: '', startDate: '', startTime: '09:00', endDate: '', endTime: '10:00', description: '' },
-      },
-      colors: {
-        mode: 'solid',
-        foregroundColor: '#000000',
-        backgroundColor: '#FFFFFF',
-        gradientType: 'linear',
-        gradientStartColor: '#000000',
-        gradientEndColor: '#4F46E5',
-        gradientRotation: 0,
-        useSeparateDotColor: false,
-        dotColor: '#000000',
-      },
-      logo: { dataUrl: null, name: '' },
-      dotShape: 'square',
-      eyeFrame: 'square',
-      eyeBall: 'square',
-      errorCorrection: 'M',
-      resolution: 1024,
-      printPreset: 'none',
-    });
+    useQRStore.getState().reset();
     toast.success('Настройки сброшены');
   };
 
@@ -149,16 +114,36 @@ export function ExportPanel() {
       const opts = getExportOptions();
       await renderQRToCanvas(canvas, opts);
 
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `qrcode-${Date.now()}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success('PNG успешно сохранён');
-      }, 'image/png');
+      // Fallback: use toDataURL if toBlob is not available
+      const blob = await new Promise<Blob | null>((resolve) => {
+        if (canvas.toBlob) {
+          canvas.toBlob(resolve, 'image/png');
+        } else {
+          // Fallback for environments without toBlob support
+          const dataUrl = canvas.toDataURL('image/png');
+          const byteString = atob(dataUrl.split(',')[1]);
+          const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          resolve(new Blob([ab], { type: mimeString }));
+        }
+      });
+
+      if (!blob) {
+        toast.error('Не удалось создать изображение');
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `qrcode-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('PNG успешно сохранён');
     } catch {
       toast.error('Ошибка при экспорте PNG');
     } finally {

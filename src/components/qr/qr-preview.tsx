@@ -21,12 +21,14 @@ export function QRPreview() {
   } = useQRStore();
 
   const [rendering, setRendering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const render = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     setRendering(true);
+    setError(null);
     try {
       const data = encodeQRData(dataType, formData);
       const presetConfig = getPrintPresetConfig(printPreset);
@@ -44,13 +46,15 @@ export function QRPreview() {
         margin: size * 0.08,
       });
     } catch {
-      // QR generation failed (likely empty data)
+      setError('Не удалось сгенерировать QR-код. Проверьте введённые данные.');
     } finally {
       setRendering(false);
     }
   }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo]);
 
   useEffect(() => {
+    // Skip rendering during SSR
+    if (typeof window === 'undefined') return;
     const timer = setTimeout(() => {
       render();
     }, 50);
@@ -79,9 +83,12 @@ export function QRPreview() {
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-xl">
+            <p className="text-xs text-destructive text-center px-4">{error}</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-export { QRPreview };

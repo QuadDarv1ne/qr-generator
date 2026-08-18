@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { useQRStore } from '@/lib/qr-store';
 import { Button } from '@/components/ui/button';
 import { Upload, X, ImageIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function LogoPanel() {
   const { logo, setLogo } = useQRStore();
@@ -12,12 +13,26 @@ export function LogoPanel() {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validate file size (2MB max)
     if (file.size > 2 * 1024 * 1024) {
+      toast.error('Файл слишком большой. Максимум 2 МБ.');
       return;
     }
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Неподдерживаемый формат. Используйте PNG, JPG, WEBP или SVG.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       setLogo({ dataUrl: reader.result as string, name: file.name });
+    };
+    reader.onerror = () => {
+      toast.error('Ошибка при чтении файла');
     };
     reader.readAsDataURL(file);
   };

@@ -1,4 +1,4 @@
-import type { QRDataType, QRDataForms } from './qr-types';
+import type { QRDataType, QRDataForms, ErrorCorrectionLevel } from './qr-types';
 
 export function encodeQRData(type: QRDataType, data: QRDataForms): string {
   switch (type) {
@@ -25,12 +25,47 @@ export function encodeQRData(type: QRDataType, data: QRDataForms): string {
   }
 }
 
+/**
+ * Estimate the maximum number of characters that can be encoded in a QR code
+ * at the given error correction level. Version 40 (largest) can hold:
+ * - Alphanumeric: ~4296 chars
+ * - Byte (UTF-8): ~2953 chars
+ * - Numeric: ~7089 chars
+ */
+export function getQRDataLimit(ecLevel: ErrorCorrectionLevel): number {
+  switch (ecLevel) {
+    case 'L': return 2953;
+    case 'M': return 2331;
+    case 'Q': return 1663;
+    case 'H': return 1273;
+    default: return 2953;
+  }
+}
+
+/**
+ * Check if the provided data exceeds the QR code capacity.
+ * Returns null if data is valid, or an error message if it's too long.
+ */
+export function validateQRData(data: string, ecLevel: ErrorCorrectionLevel): string | null {
+  if (!data || data.length < 2) {
+    return 'Введите данные для генерации QR-кода';
+  }
+  const limit = getQRDataLimit(ecLevel);
+  if (data.length > limit) {
+    return `Слишком много данных. Максимум ~${limit} символов при уровне коррекции "${ecLevel}".`;
+  }
+  return null;
+}
+
 function encodeEmail(e: QRDataForms['email']): string {
+  if (!e.to || e.to.trim() === '') {
+    return 'mailto:';
+  }
   const params: string[] = [];
   if (e.subject) params.push(`subject=${encodeURIComponent(e.subject)}`);
   if (e.body) params.push(`body=${encodeURIComponent(e.body)}`);
   const query = params.length ? `?${params.join('&')}` : '';
-  return `mailto:${e.to || ''}${query}`;
+  return `mailto:${e.to}${query}`;
 }
 
 function encodeWifi(w: QRDataForms['wifi']): string {

@@ -288,8 +288,14 @@ function drawLogo(
   margin: number,
   bgColor: string
 ) {
+  // Skip if no valid logo data
+  if (!logoDataUrl || logoDataUrl.trim() === '') {
+    return Promise.resolve();
+  }
+
   return new Promise<void>((resolve) => {
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
       const logoModules = Math.floor(moduleCount * 0.22);
       const moduleSize = (size - margin * 2) / moduleCount;
@@ -327,7 +333,8 @@ export async function renderQRToCanvas(
   if (!data || data.length === 0) {
     canvas.width = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Не удалось получить контекст canvas');
     ctx.fillStyle = colors.backgroundColor;
     ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = '#999999';

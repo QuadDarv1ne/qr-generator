@@ -123,4 +123,18 @@ export const useQRStore = create<QRStore>((set) => ({
 
   printPreset: 'none',
   setPrintPreset: (printPreset) => set({ printPreset }),
+
+  // Reset all settings to defaults
+  reset: () => set({
+    dataType: 'url',
+    formData: defaultFormData,
+    colors: defaultColors,
+    logo: { dataUrl: null, name: '' },
+    dotShape: 'square',
+    eyeFrame: 'square',
+    eyeBall: 'square',
+    errorCorrection: 'M',
+    resolution: 1024,
+    printPreset: 'none',
+  }),
 }));
