@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FileArchive, Loader2, Layers } from 'lucide-react';
+import { FileArchive, FileText, Loader2, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -24,10 +24,18 @@ const BATCH_SIZE_OPTIONS = [
   { value: '2048', label: '2048 px' },
 ];
 
+const PDF_CELL_OPTIONS = [
+  { value: '20', label: '20 × 20 мм' },
+  { value: '30', label: '30 × 30 мм' },
+  { value: '40', label: '40 × 40 мм' },
+  { value: '50', label: '50 × 50 мм' },
+  { value: '70', label: '70 × 70 мм' },
+];
+
+const PDF_RENDER_SIZE = 512;
+
 export function BatchPanel() {
   const {
-    dataType,
-    formData,
     colors,
     dotShape,
     eyeFrame,
@@ -36,11 +44,13 @@ export function BatchPanel() {
     printPreset,
     logo,
     logoSize,
+    margin,
   } = useQRStore();
 
   const [lines, setLines] = useState('');
-  const [format, setFormat] = useState<'png' | 'svg'>('png');
+  const [format, setFormat] = useState<'png' | 'svg' | 'pdf'>('png');
   const [size, setSize] = useState(1024);
+  const [pdfCell, setPdfCell] = useState(30);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -63,25 +73,18 @@ export function BatchPanel() {
       errorCorrection: effectiveEC,
       logo: logo.dataUrl,
       logoSize,
-      margin: renderSize * 0.08,
+      margin: renderSize * (margin / 100),
     }),
-    [colors, dotShape, eyeFrame, eyeBall, effectiveEC, logo, logoSize]
+    [colors, dotShape, eyeFrame, eyeBall, effectiveEC, logo, logoSize, margin]
   );
 
-  const download = async () => {
-    if (!items.length) {
-      toast.error('Введите хотя бы одну строку');
-      return;
-    }
+  const renderPNGBlob = async (data: string): Promise<Blob | null> => {
+    const canvas = document.createElement('canvas');
+    await renderQRToCanvas(canvas, buildOptions(data, PDF_RENDER_SIZE));
+    return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  };
 
-    const tooLong = items.filter((item) => validateQRData(item, effectiveEC) !== null);
-    if (tooLong.length) {
-      toast.error(
-        `Строк слишком длинных для QR: ${tooLong.length}. Увеличьте коррекцию ошибок или сократите текст.`
-      );
-      return;
-    }
-
+  const downloadZIP = async () => {
     setBusy(true);
     setProgress(0);
     try {
@@ -130,6 +133,73 @@ export function BatchPanel() {
     }
   };
 
+  const downloadPDFGrid = async () => {
+    setBusy(true);
+    setProgress(0);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const pad = 10;
+      const spacing = 3;
+      const cell = pdfCell;
+      const cols = Math.floor((pageW - pad * 2 + spacing) / (cell + spacing));
+      const rows = Math.floor((pageH - pad * 2 + spacing) / (cell + spacing));
+      const perPage = cols * rows;
+      const cellW = (pageW - pad * 2 - (cols - 1) * spacing) / cols;
+      const cellH = (pageH - pad * 2 - (rows - 1) * spacing) / rows;
+
+      for (let i = 0; i < items.length; i++) {
+        if (i > 0 && i % perPage === 0) pdf.addPage();
+        const idxOnPage = i % perPage;
+        const col = idxOnPage % cols;
+        const row = Math.floor(idxOnPage / cols);
+        const x = pad + col * (cellW + spacing);
+        const y = pad + row * (cellH + spacing);
+
+        const blob = await renderPNGBlob(items[i]);
+        if (!blob) continue;
+        const imgData = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('read error'));
+          reader.readAsDataURL(blob);
+        });
+        pdf.addImage(imgData, 'PNG', x, y, cellW, cellH);
+        setProgress(Math.round(((i + 1) / items.length) * 100));
+      }
+
+      pdf.save(`qrcodes-grid-${Date.now()}.pdf`);
+      toast.success(`PDF с сеткой из ${items.length} QR-кодов сохранён`);
+    } catch {
+      toast.error('Ошибка при генерации PDF');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const download = async () => {
+    if (!items.length) {
+      toast.error('Введите хотя бы одну строку');
+      return;
+    }
+
+    const tooLong = items.filter((item) => validateQRData(item, effectiveEC) !== null);
+    if (tooLong.length) {
+      toast.error(
+        `Строк слишком длинных для QR: ${tooLong.length}. Увеличьте коррекцию ошибок или сократите текст.`
+      );
+      return;
+    }
+
+    if (format === 'pdf') {
+      await downloadPDFGrid();
+    } else {
+      await downloadZIP();
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3">
@@ -157,38 +227,60 @@ export function BatchPanel() {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">Формат</Label>
-          <Select
-            value={format}
-            onValueChange={(v) => setFormat(v as 'png' | 'svg')}
-          >
+          <Select value={format} onValueChange={(v) => setFormat(v as 'png' | 'svg' | 'pdf')}>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="png">PNG</SelectItem>
-              <SelectItem value="svg">SVG (вектор)</SelectItem>
+              <SelectItem value="png">PNG (ZIP)</SelectItem>
+              <SelectItem value="svg">SVG (ZIP, вектор)</SelectItem>
+              <SelectItem value="pdf">PDF (сетка на листе)</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Размер</Label>
-          <Select
-            value={String(size)}
-            onValueChange={(v) => setSize(parseInt(v, 10))}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {BATCH_SIZE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {format === 'pdf' ? (
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Размер ячейки</Label>
+            <Select value={String(pdfCell)} onValueChange={(v) => setPdfCell(parseInt(v, 10))}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PDF_CELL_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Размер</Label>
+            <Select value={String(size)} onValueChange={(v) => setSize(parseInt(v, 10))}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BATCH_SIZE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
+
+      {format === 'pdf' && (
+        <p className="text-xs text-muted-foreground">
+          QR-коды размещаются сеткой на листе A4 с полями 10 мм и зазором 3 мм.
+          {` Вмещается ~${Math.floor(
+            ((210 - 20 + 3) / (pdfCell + 3)) * ((297 - 20 + 3) / (pdfCell + 3))
+          )} шт. на страницу.`}
+        </p>
+      )}
 
       {busy && (
         <div className="space-y-1.5">
@@ -209,10 +301,16 @@ export function BatchPanel() {
       >
         {busy ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        ) : format === 'pdf' ? (
+          <FileText className="h-4 w-4 mr-2" />
         ) : (
           <FileArchive className="h-4 w-4 mr-2" />
         )}
-        {busy ? `Генерация… ${progress}%` : 'Скачать все как ZIP'}
+        {busy
+          ? `Генерация… ${progress}%`
+          : format === 'pdf'
+            ? 'Скачать PDF с сеткой'
+            : 'Скачать все как ZIP'}
       </Button>
     </div>
   );

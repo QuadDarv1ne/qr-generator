@@ -48,11 +48,34 @@ interface QRStore {
   setErrorCorrection: (l: ErrorCorrectionLevel) => void;
   resolution: number;
   setResolution: (r: number) => void;
+  margin: number;
+  setMargin: (m: number) => void;
   printPreset: PrintPreset;
   setPrintPreset: (p: PrintPreset) => void;
 
   // Reset all settings to defaults
   reset: () => void;
+
+  // Snapshot of all settings (without logo) for saving/restoring in history
+  snapshotAll: () => QRSnapshot;
+}
+
+/**
+ * Snapshot of all QR settings (without the logo image).
+ * Used for saving/restoring QR codes in history.
+ */
+export interface QRSnapshot {
+  dataType: QRDataType;
+  formData: QRDataForms;
+  colors: QRColorSettings;
+  logoSize: number;
+  dotShape: DotShape;
+  eyeFrame: EyeFrameShape;
+  eyeBall: EyeBallShape;
+  errorCorrection: ErrorCorrectionLevel;
+  resolution: number;
+  margin: number;
+  printPreset: PrintPreset;
 }
 
 const defaultFormData: QRDataForms = {
@@ -115,6 +138,7 @@ const initialState = {
   eyeBall: 'square' as EyeBallShape,
   errorCorrection: 'M' as ErrorCorrectionLevel,
   resolution: 1024,
+  margin: 8,
   printPreset: 'none' as PrintPreset,
 };
 
@@ -145,10 +169,30 @@ export const useQRStore = create<QRStore>()(
 
       setResolution: (resolution) => set({ resolution }),
 
+      setMargin: (margin) => set({ margin }),
+
       setPrintPreset: (printPreset) => set({ printPreset }),
 
       // Reset all settings to defaults
       reset: () => set({ ...initialState }),
+
+      // Snapshot of all settings (without logo) for saving/restoring in history
+      snapshotAll: () => {
+        const s = useQRStore.getState();
+        return {
+          dataType: s.dataType,
+          formData: s.formData,
+          colors: s.colors,
+          logoSize: s.logoSize,
+          dotShape: s.dotShape,
+          eyeFrame: s.eyeFrame,
+          eyeBall: s.eyeBall,
+          errorCorrection: s.errorCorrection,
+          resolution: s.resolution,
+          margin: s.margin,
+          printPreset: s.printPreset,
+        };
+      },
     }),
     {
       name: 'qr-generator-settings',

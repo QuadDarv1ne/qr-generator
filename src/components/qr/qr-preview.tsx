@@ -24,6 +24,7 @@ export function QRPreview() {
     printPreset,
     logo,
     logoSize,
+    margin,
   } = useQRStore();
 
   const [rendering, setRendering] = useState(false);
@@ -52,14 +53,14 @@ export function QRPreview() {
         errorCorrection: printPreset !== 'none' ? presetConfig.errorCorrection : errorCorrection,
         logo: logo.dataUrl,
         logoSize,
-        margin: size * 0.08,
+        margin: size * (margin / 100),
       });
     } catch {
       setError('Не удалось сгенерировать QR-код. Проверьте введённые данные.');
     } finally {
       setRendering(false);
     }
-  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize]);
+  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize, margin]);
 
   useEffect(() => {
     // Skip rendering during SSR
@@ -93,7 +94,7 @@ export function QRPreview() {
         errorCorrection: printPreset !== 'none' ? presetConfig.errorCorrection : errorCorrection,
         logo: logo.dataUrl,
         logoSize,
-        margin: 1024 * 0.08,
+        margin: 1024 * (margin / 100),
       });
 
       const ctx = canvas.getContext('2d');
@@ -122,7 +123,7 @@ export function QRPreview() {
     } finally {
       setScanning(false);
     }
-  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, printPreset, logo, logoSize]);
+  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, printPreset, logo, logoSize, margin]);
 
   return (
     <div className="flex flex-col items-center gap-4">

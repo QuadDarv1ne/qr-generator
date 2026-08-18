@@ -42,6 +42,7 @@ export function ExportPanel() {
     printPreset,
     logo,
     logoSize,
+    margin,
   } = useQRStore();
 
   const getDataString = useCallback(() => {
@@ -69,9 +70,9 @@ export function ExportPanel() {
       errorCorrection: printPreset !== 'none' ? presetConfig.errorCorrection : errorCorrection,
       logo: logo.dataUrl,
       logoSize,
-      margin: size * 0.08,
+      margin: size * (margin / 100),
     };
-  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize, getDataString]);
+  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize, margin, getDataString]);
 
   const validate = (): string | null => {
     const data = getDataString();
@@ -88,7 +89,7 @@ export function ExportPanel() {
       const canvas = document.createElement('canvas');
       const opts = getExportOptions();
       opts.size = 512;
-      opts.margin = 512 * 0.08;
+      opts.margin = 512 * (margin / 100);
       await renderQRToCanvas(canvas, opts);
 
       const blob = await new Promise<Blob | null>((resolve) =>

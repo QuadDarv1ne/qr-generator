@@ -26,6 +26,8 @@ export function SettingsPanel() {
     setErrorCorrection,
     resolution,
     setResolution,
+    margin,
+    setMargin,
     printPreset,
     setPrintPreset,
   } = useQRStore();
@@ -81,6 +83,27 @@ export function SettingsPanel() {
         </div>
       </div>
 
+      {/* Margin */}
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <Label className="text-xs font-medium text-muted-foreground">
+            Отступ вокруг кода
+          </Label>
+          <span className="text-xs text-muted-foreground font-mono">{margin}%</span>
+        </div>
+        <Slider
+          value={[margin]}
+          onValueChange={([m]) => setMargin(m)}
+          min={0}
+          max={15}
+          step={1}
+        />
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>0</span>
+          <span>15</span>
+        </div>
+      </div>
+
       {/* Print Preset */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -104,6 +127,11 @@ export function SettingsPanel() {
             ))}
           </SelectContent>
         </Select>
+        {printPreset !== 'none' && (
+          <p className="text-xs text-muted-foreground">
+            Пресет переопределяет разрешение и коррекцию ошибок при экспорте.
+          </p>
+        )}
       </div>
     </div>
   );

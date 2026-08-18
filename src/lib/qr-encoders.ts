@@ -9,7 +9,7 @@ export function encodeQRData(type: QRDataType, data: QRDataForms): string {
     case 'email':
       return encodeEmail(data.email);
     case 'phone':
-      return `tel:${data.phone || '+79991234567'}`;
+      return `tel:${normalizePhone(data.phone) || '+79991234567'}`;
     case 'sms':
       return encodeSms(data.sms);
     case 'wifi':
@@ -83,6 +83,12 @@ function encodeEmail(e: QRDataForms['email']): string {
   if (e.body) params.push(`body=${encodeURIComponent(e.body)}`);
   const query = params.length ? `?${params.join('&')}` : '';
   return `mailto:${e.to}${query}`;
+}
+
+/** Keep only digits and a leading "+" — removes spaces, dashes, parentheses */
+function normalizePhone(phone: string): string {
+  const cleaned = phone.replace(/[\s\-()]/g, '');
+  return cleaned;
 }
 
 function encodeSms(s: QRDataForms['sms']): string {
@@ -159,6 +165,23 @@ export function validateEventDates(ev: QRDataForms['event']): string | null {
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
   if (end < start) {
     return 'Дата окончания раньше даты начала';
+  }
+  return null;
+}
+
+/**
+ * Validate geo coordinates: returns an error message or null.
+ * Latitude must be in [-90, 90], longitude in [-180, 180].
+ */
+export function validateCoordinates(loc: QRDataForms['location']): string | null {
+  if (loc.query) return null;
+  const lat = parseFloat(loc.latitude);
+  const lon = parseFloat(loc.longitude);
+  if (loc.latitude && (Number.isNaN(lat) || lat < -90 || lat > 90)) {
+    return 'Широта должна быть числом от -90 до 90';
+  }
+  if (loc.longitude && (Number.isNaN(lon) || lon < -180 || lon > 180)) {
+    return 'Долгота должна быть числом от -180 до 180';
   }
   return null;
 }

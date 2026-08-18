@@ -1,7 +1,7 @@
 'use client';
 
 import { useQRStore } from '@/lib/qr-store';
-import { validateEventDates } from '@/lib/qr-encoders';
+import { validateEventDates, validateCoordinates } from '@/lib/qr-encoders';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -378,6 +378,9 @@ function LocationForm({
           />
         </FormField>
       </div>
+      {validateCoordinates(value) && (
+        <p className="text-xs text-destructive">{validateCoordinates(value)}</p>
+      )}
     </div>
   );
 }
