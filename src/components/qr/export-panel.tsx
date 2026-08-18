@@ -42,6 +42,7 @@ export function ExportPanel() {
     printPreset,
     logo,
     logoSize,
+    logoShape,
     margin,
   } = useQRStore();
 
@@ -70,9 +71,10 @@ export function ExportPanel() {
       errorCorrection: printPreset !== 'none' ? presetConfig.errorCorrection : errorCorrection,
       logo: logo.dataUrl,
       logoSize,
+      logoShape,
       margin: size * (margin / 100),
     };
-  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize, margin, getDataString]);
+  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize, logoShape, margin, getDataString]);
 
   const validate = (): string | null => {
     const data = getDataString();

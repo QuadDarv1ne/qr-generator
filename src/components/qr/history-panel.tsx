@@ -44,6 +44,7 @@ export function HistoryPanel() {
       formData: s.formData,
       colors: s.colors,
       logoSize: s.logoSize,
+      logoShape: s.logoShape,
       dotShape: s.dotShape,
       eyeFrame: s.eyeFrame,
       eyeBall: s.eyeBall,

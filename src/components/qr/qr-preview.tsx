@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQRStore } from '@/lib/qr-store';
-import { encodeQRData } from '@/lib/qr-encoders';
+import { encodeQRData, validateQRData } from '@/lib/qr-encoders';
 import { renderQRToCanvas, getPrintPresetConfig } from '@/lib/qr-renderer';
 import { Button } from '@/components/ui/button';
 import { ScanLine, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
@@ -24,6 +24,7 @@ export function QRPreview() {
     printPreset,
     logo,
     logoSize,
+    logoShape,
     margin,
   } = useQRStore();
 
@@ -41,7 +42,15 @@ export function QRPreview() {
     try {
       const data = encodeQRData(dataType, formData);
       const presetConfig = getPrintPresetConfig(printPreset);
+      const effectiveEC =
+        printPreset !== 'none' ? presetConfig.errorCorrection : errorCorrection;
       const size = Math.min(resolution, 600);
+
+      const validationError = validateQRData(data, effectiveEC);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
 
       await renderQRToCanvas(canvas, {
         data,
@@ -50,9 +59,10 @@ export function QRPreview() {
         dotShape,
         eyeFrame,
         eyeBall,
-        errorCorrection: printPreset !== 'none' ? presetConfig.errorCorrection : errorCorrection,
+        errorCorrection: effectiveEC,
         logo: logo.dataUrl,
         logoSize,
+        logoShape,
         margin: size * (margin / 100),
       });
     } catch {
@@ -60,7 +70,7 @@ export function QRPreview() {
     } finally {
       setRendering(false);
     }
-  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize, margin]);
+  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, resolution, printPreset, logo, logoSize, logoShape, margin]);
 
   useEffect(() => {
     // Skip rendering during SSR
@@ -94,6 +104,7 @@ export function QRPreview() {
         errorCorrection: printPreset !== 'none' ? presetConfig.errorCorrection : errorCorrection,
         logo: logo.dataUrl,
         logoSize,
+        logoShape,
         margin: 1024 * (margin / 100),
       });
 
@@ -123,7 +134,7 @@ export function QRPreview() {
     } finally {
       setScanning(false);
     }
-  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, printPreset, logo, logoSize, margin]);
+  }, [dataType, formData, colors, dotShape, eyeFrame, eyeBall, errorCorrection, printPreset, logo, logoSize, logoShape, margin]);
 
   return (
     <div className="flex flex-col items-center gap-4">

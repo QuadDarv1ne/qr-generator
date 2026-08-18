@@ -44,6 +44,7 @@ export function BatchPanel() {
     printPreset,
     logo,
     logoSize,
+    logoShape,
     margin,
   } = useQRStore();
 
@@ -73,9 +74,10 @@ export function BatchPanel() {
       errorCorrection: effectiveEC,
       logo: logo.dataUrl,
       logoSize,
+      logoShape,
       margin: renderSize * (margin / 100),
     }),
-    [colors, dotShape, eyeFrame, eyeBall, effectiveEC, logo, logoSize, margin]
+    [colors, dotShape, eyeFrame, eyeBall, effectiveEC, logo, logoSize, logoShape, margin]
   );
 
   const renderPNGBlob = async (data: string): Promise<Blob | null> => {

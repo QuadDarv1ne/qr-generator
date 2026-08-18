@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import type { QRColorSettings, DotShape, EyeFrameShape, EyeBallShape, ErrorCorrectionLevel } from './qr-types';
+import type { QRColorSettings, DotShape, EyeFrameShape, EyeBallShape, ErrorCorrectionLevel, LogoShape } from './qr-types';
 
 export interface QRRenderOptions {
   data: string;
@@ -11,8 +11,11 @@ export interface QRRenderOptions {
   errorCorrection: ErrorCorrectionLevel;
   logo?: string | null;
   logoSize?: number;
+  logoShape?: LogoShape;
   margin: number;
 }
+
+export type { LogoShape };
 
 function getFinderPositions(moduleCount: number) {
   return [
@@ -197,6 +200,46 @@ function drawDot(
       ctx.fill();
       break;
     }
+    case 'triangle': {
+      ctx.beginPath();
+      ctx.moveTo(cx, y + gap);
+      ctx.lineTo(x + gap + ds, y + gap + ds);
+      ctx.lineTo(x + gap, y + gap + ds);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'hexagon': {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2;
+        const px = cx + Math.cos(angle) * (ds / 2);
+        const py = cy + Math.sin(angle) * (ds / 2);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'flower': {
+      const petalR = ds * 0.28;
+      const petals: [number, number][] = [
+        [cx - ds * 0.2, cy],
+        [cx + ds * 0.2, cy],
+        [cx, cy - ds * 0.2],
+        [cx, cy + ds * 0.2],
+      ];
+      for (const [px, py] of petals) {
+        ctx.beginPath();
+        ctx.arc(px, py, petalR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, petalR * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
   }
 }
 
@@ -288,7 +331,8 @@ function drawLogo(
   moduleCount: number,
   margin: number,
   bgColor: string,
-  logoSizePct = 22
+  logoSizePct = 22,
+  logoShape: LogoShape = 'rounded'
 ) {
   // Skip if no valid logo data
   if (!logoDataUrl || logoDataUrl.trim() === '') {
@@ -306,15 +350,27 @@ function drawLogo(
       const x = (size - logoSizePx) / 2;
       const y = (size - logoSizePx) / 2;
 
+      const bgRadius =
+        logoShape === 'circle'
+          ? logoSizePx / 2 + padding
+          : logoShape === 'square'
+            ? logoSizePx * 0.04
+            : logoSizePx * 0.18;
+      const clipRadius =
+        logoShape === 'circle'
+          ? logoSizePx / 2
+          : logoShape === 'square'
+            ? logoSizePx * 0.04
+            : bgRadius * 0.7;
+
       // Background with padding
       ctx.fillStyle = bgColor;
-      const bgRadius = logoSizePx * 0.18;
       roundRect(ctx, x - padding, y - padding, logoSizePx + padding * 2, logoSizePx + padding * 2, bgRadius);
       ctx.fill();
 
       // Logo image clipped to rounded rect
       ctx.save();
-      roundRect(ctx, x, y, logoSizePx, logoSizePx, bgRadius * 0.7);
+      roundRect(ctx, x, y, logoSizePx, logoSizePx, clipRadius);
       ctx.clip();
       ctx.drawImage(img, x, y, logoSizePx, logoSizePx);
       ctx.restore();
@@ -418,7 +474,7 @@ export async function renderQRToCanvas(
 
   // Draw logo
   if (logo) {
-    await drawLogo(ctx, logo, size, moduleCount, margin, colors.backgroundColor, logoSize);
+    await drawLogo(ctx, logo, size, moduleCount, margin, colors.backgroundColor, logoSize, logoShape);
   }
 }
 
@@ -481,6 +537,29 @@ function svgDot(x: number, y: number, size: number, shape: DotShape, fill: strin
       return `<polygon points="${svgStarPoints(cx, cy, ds / 2, ds / 4, 4)}" ${f}/>`;
     case 'extra-rounded':
       return `<rect x="${num(x + gap)}" y="${num(y + gap)}" width="${num(ds)}" height="${num(ds)}" rx="${num(ds * 0.5)}" ${f}/>`;
+    case 'triangle':
+      return `<polygon points="${num(cx)},${num(y + gap)} ${num(x + gap + ds)},${num(y + gap + ds)} ${num(x + gap)},${num(y + gap + ds)}" ${f}/>`;
+    case 'hexagon': {
+      const pts: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2;
+        pts.push(`${num(cx + Math.cos(angle) * (ds / 2))},${num(cy + Math.sin(angle) * (ds / 2))}`);
+      }
+      return `<polygon points="${pts.join(' ')}" ${f}/>`;
+    }
+    case 'flower': {
+      const petalR = ds * 0.28;
+      const petals: [number, number][] = [
+        [cx - ds * 0.2, cy],
+        [cx + ds * 0.2, cy],
+        [cx, cy - ds * 0.2],
+        [cx, cy + ds * 0.2],
+      ];
+      const circles = petals
+        .map(([px, py]) => `<circle cx="${num(px)}" cy="${num(py)}" r="${num(petalR)}" ${f}/>`)
+        .join('');
+      return `${circles}<circle cx="${num(cx)}" cy="${num(cy)}" r="${num(petalR * 0.85)}" ${f}/>`;
+    }
   }
 }
 
@@ -526,7 +605,7 @@ function svgEyeBall(cx: number, cy: number, moduleSize: number, shape: EyeBallSh
  * The logo, if any, is embedded as an <image> element.
  */
 export async function generateQRSVG(options: QRRenderOptions): Promise<string> {
-  const { data, size, colors, dotShape, eyeFrame, eyeBall, errorCorrection, logo, margin, logoSize = 22 } = options;
+  const { data, size, colors, dotShape, eyeFrame, eyeBall, errorCorrection, logo, margin, logoSize = 22, logoShape = 'rounded' } = options;
 
   const parts: string[] = [];
   parts.push(
@@ -617,13 +696,24 @@ export async function generateQRSVG(options: QRRenderOptions): Promise<string> {
     const padding = logoSizePx * 0.15;
     const x = (size - logoSizePx) / 2;
     const y = (size - logoSizePx) / 2;
-    const bgRadius = logoSizePx * 0.18;
+    const bgRadius =
+      logoShape === 'circle'
+        ? logoSizePx / 2 + padding
+        : logoShape === 'square'
+          ? logoSizePx * 0.04
+          : logoSizePx * 0.18;
+    const clipRadius =
+      logoShape === 'circle'
+        ? logoSizePx / 2
+        : logoShape === 'square'
+          ? logoSizePx * 0.04
+          : bgRadius * 0.7;
     parts.push(
       `<rect x="${num(x - padding)}" y="${num(y - padding)}" width="${num(logoSizePx + padding * 2)}"` +
         ` height="${num(logoSizePx + padding * 2)}" rx="${num(bgRadius)}" fill="${colors.backgroundColor}"/>`
     );
     parts.push(`<clipPath id="qrc"><rect x="${num(x)}" y="${num(y)}" width="${num(logoSizePx)}"` +
-      ` height="${num(logoSizePx)}" rx="${num(bgRadius * 0.7)}"/></clipPath>`);
+      ` height="${num(logoSizePx)}" rx="${num(clipRadius)}"/></clipPath>`);
     parts.push(
       `<image clip-path="url(#qrc)" x="${num(x)}" y="${num(y)}" width="${num(logoSizePx)}"` +
         ` height="${num(logoSizePx)}" href="${logo}" xlink:href="${logo}" preserveAspectRatio="none"/>`

@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Upload, X, ImageIcon } from 'lucide-react';
+import { LOGO_SHAPE_LABELS, type LogoShape } from '@/lib/qr-types';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export function LogoPanel() {
-  const { logo, setLogo, logoSize, setLogoSize } = useQRStore();
+  const { logo, setLogo, logoSize, setLogoSize, logoShape, setLogoShape } = useQRStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,23 +97,53 @@ export function LogoPanel() {
         </div>
       )}
       {logo.dataUrl && (
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <Label className="text-xs font-medium text-muted-foreground">
-              Размер логотипа
-            </Label>
-            <span className="text-xs text-muted-foreground font-mono">{logoSize}%</span>
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">Форма логотипа</Label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(Object.keys(LOGO_SHAPE_LABELS) as LogoShape[]).map((shape) => (
+                <button
+                  key={shape}
+                  onClick={() => setLogoShape(shape)}
+                  aria-pressed={logoShape === shape}
+                  className={cn(
+                    'flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all',
+                    logoShape === shape
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                      : 'border-border hover:border-primary/30 hover:bg-accent/50'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'w-6 h-6 bg-current block',
+                      shape === 'circle' && 'rounded-full',
+                      shape === 'rounded' && 'rounded-md',
+                      shape === 'square' && 'rounded-[1px]'
+                    )}
+                  />
+                  <span className="text-[10px]">{LOGO_SHAPE_LABELS[shape]}</span>
+                </button>
+              ))}
+            </div>
           </div>
-          <Slider
-            value={[logoSize]}
-            onValueChange={([v]) => setLogoSize(v)}
-            min={10}
-            max={40}
-            step={1}
-          />
-          <p className="text-xs text-muted-foreground">
-            Большой логотип снижает читаемость кода. Рекомендуется 15–25%.
-          </p>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Размер логотипа
+              </Label>
+              <span className="text-xs text-muted-foreground font-mono">{logoSize}%</span>
+            </div>
+            <Slider
+              value={[logoSize]}
+              onValueChange={([v]) => setLogoSize(v)}
+              min={10}
+              max={40}
+              step={1}
+            />
+            <p className="text-xs text-muted-foreground">
+              Большой логотип снижает читаемость кода. Рекомендуется 15–25%.
+            </p>
+          </div>
         </div>
       )}
       <p className="text-xs text-muted-foreground">

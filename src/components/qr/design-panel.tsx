@@ -33,6 +33,7 @@ function ShapeGrid<T extends string>({
           <button
             key={opt.key}
             onClick={() => onChange(opt.key)}
+            aria-pressed={value === opt.key}
             className={cn(
               'flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all',
               value === opt.key
@@ -83,6 +84,31 @@ function DotPreview({ shape }: { shape: DotShape }) {
       );
     case 'extra-rounded':
       return <div className={cn(cls, 'bg-current rounded-2xl')} />;
+    case 'triangle':
+      return (
+        <svg viewBox="0 0 24 24" className={cls}>
+          <polygon points="12,3 23,21 1,21" className="fill-current" />
+        </svg>
+      );
+    case 'hexagon':
+      return (
+        <svg viewBox="0 0 24 24" className={cls}>
+          <polygon
+            points="12,2 21,7 21,17 12,22 3,17 3,7"
+            className="fill-current"
+          />
+        </svg>
+      );
+    case 'flower':
+      return (
+        <svg viewBox="0 0 24 24" className={cls}>
+          <circle cx="9" cy="12" r="3.2" className="fill-current" />
+          <circle cx="15" cy="12" r="3.2" className="fill-current" />
+          <circle cx="12" cy="9" r="3.2" className="fill-current" />
+          <circle cx="12" cy="15" r="3.2" className="fill-current" />
+          <circle cx="12" cy="12" r="2.8" className="fill-current" />
+        </svg>
+      );
   }
 }
 

@@ -9,6 +9,7 @@ import type {
   EyeBallShape,
   ErrorCorrectionLevel,
   PrintPreset,
+  LogoShape,
 } from './qr-types';
 
 interface LogoState {
@@ -34,6 +35,8 @@ interface QRStore {
   setLogo: (logo: LogoState) => void;
   logoSize: number;
   setLogoSize: (s: number) => void;
+  logoShape: LogoShape;
+  setLogoShape: (s: LogoShape) => void;
 
   // Design
   dotShape: DotShape;
@@ -69,6 +72,7 @@ export interface QRSnapshot {
   formData: QRDataForms;
   colors: QRColorSettings;
   logoSize: number;
+  logoShape: LogoShape;
   dotShape: DotShape;
   eyeFrame: EyeFrameShape;
   eyeBall: EyeBallShape;
@@ -133,6 +137,7 @@ const initialState = {
   colors: defaultColors,
   logo: { dataUrl: null as string | null, name: '' },
   logoSize: 22,
+  logoShape: 'rounded' as LogoShape,
   dotShape: 'square' as DotShape,
   eyeFrame: 'square' as EyeFrameShape,
   eyeBall: 'square' as EyeBallShape,
@@ -159,6 +164,8 @@ export const useQRStore = create<QRStore>()(
 
       setLogoSize: (logoSize) => set({ logoSize }),
 
+      setLogoShape: (logoShape) => set({ logoShape }),
+
       setDotShape: (dotShape) => set({ dotShape }),
 
       setEyeFrame: (eyeFrame) => set({ eyeFrame }),
@@ -184,6 +191,7 @@ export const useQRStore = create<QRStore>()(
           formData: s.formData,
           colors: s.colors,
           logoSize: s.logoSize,
+          logoShape: s.logoShape,
           dotShape: s.dotShape,
           eyeFrame: s.eyeFrame,
           eyeBall: s.eyeBall,

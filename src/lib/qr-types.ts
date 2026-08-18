@@ -82,7 +82,10 @@ export type DotShape =
   | 'classy-rounded'
   | 'diamond'
   | 'star'
-  | 'extra-rounded';
+  | 'extra-rounded'
+  | 'triangle'
+  | 'hexagon'
+  | 'flower';
 
 export type EyeFrameShape =
   | 'square'
@@ -98,6 +101,14 @@ export type EyeBallShape =
   | 'circle';
 
 export type ErrorCorrectionLevel = 'L' | 'M' | 'Q' | 'H';
+
+export type LogoShape = 'rounded' | 'circle' | 'square';
+
+export const LOGO_SHAPE_LABELS: Record<LogoShape, string> = {
+  rounded: 'Скруглённый',
+  circle: 'Круг',
+  square: 'Квадрат',
+};
 
 export type PrintPreset =
   | 'none'
@@ -157,6 +168,9 @@ export const DOT_SHAPE_LABELS: Record<DotShape, string> = {
   diamond: 'Ромб',
   star: 'Звезда',
   'extra-rounded': 'Макс. скруглённый',
+  triangle: 'Треугольник',
+  hexagon: 'Шестиугольник',
+  flower: 'Цветок',
 };
 
 export const EYE_FRAME_LABELS: Record<EyeFrameShape, string> = {

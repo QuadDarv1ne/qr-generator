@@ -52,6 +52,7 @@ export function TypeSelector() {
             <button
               key={type}
               onClick={() => setDataType(type)}
+              aria-pressed={isActive}
               className={cn(
                 'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all shrink-0',
                 'border border-border hover:border-primary/30',
