@@ -195,9 +195,10 @@ function encodeLocation(loc: QRDataForms['location']): string {
 
 function encodeEvent(ev: QRDataForms['event']): string {
   const fmtDate = (d: string, t: string): string => {
-    const date = d || new Date().toISOString().slice(0, 10);
-    const time = t || '09:00';
-    return `${date}T${time}`.replace(/[-:]/g, '');
+    const date = (d || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+    const time = (t || '09:00').replace(/:/g, '');
+    // iCalendar требует формат YYYYMMDDTHHMMSS
+    return `${date}T${time}00`;
   };
   const start = fmtDate(ev.startDate, ev.startTime);
   const end = fmtDate(ev.endDate, ev.endTime);

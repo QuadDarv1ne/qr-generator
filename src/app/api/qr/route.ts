@@ -49,17 +49,29 @@ async function svgToPng(svg: string, size: number): Promise<Buffer> {
     .toBuffer();
 }
 
-const contentType = (format: 'svg' | 'png') =>
-  format === 'png' ? 'image/png' : 'image/svg+xml; charset=utf-8';
+/** Rasterize an SVG string into a JPG buffer (white background, since JPG has no alpha). */
+async function svgToJpg(svg: string, size: number): Promise<Buffer> {
+  return sharp(Buffer.from(svg), { density: 144 })
+    .resize(size, size)
+    .flatten({ background: '#ffffff' })
+    .jpeg({ quality: 92 })
+    .toBuffer();
+}
+
+const contentType = (format: 'svg' | 'png' | 'jpg') => {
+  if (format === 'png') return 'image/png';
+  if (format === 'jpg') return 'image/jpeg';
+  return 'image/svg+xml; charset=utf-8';
+};
 
 /**
  * POST /api/qr
  * JSON-тело: { data, size?, margin?, ec?, mode?, foreground?, background?,
  *   gradientType?, gradientStart?, gradientEnd?, gradientRotation?,
  *   dotShape?, eyeFrame?, eyeBall?, transparent?, logoSize?, logoShape?, logo?,
- *   format? ('svg' | 'png') }
+ *   format? ('svg' | 'png' | 'jpg') }
  * Логотип передаётся как data URL (base64) — позволяет обойти лимиты длины URL.
- * По умолчанию возвращает векторный SVG, при format='png' — растровый PNG.
+ * По умолчанию возвращает векторный SVG, при format='png'/'jpg' — растровое изображение.
  */
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -95,7 +107,7 @@ export async function POST(request: NextRequest) {
     logoSize: z.number().min(10).max(40).default(22),
     logoShape: z.enum(LOGO_SHAPES).default('rounded'),
     logo: z.string().max(5_000_000).nullable().optional(),
-    format: z.enum(['svg', 'png']).default('svg'),
+    format: z.enum(['svg', 'png', 'jpg']).default('svg'),
   });
 
   const parsed = schema.safeParse(body);
@@ -149,7 +161,9 @@ export async function POST(request: NextRequest) {
     const body =
       p.format === 'png'
         ? new Uint8Array(await svgToPng(svg, p.size))
-        : new TextEncoder().encode(svg);
+        : p.format === 'jpg'
+          ? new Uint8Array(await svgToJpg(svg, p.size))
+          : new TextEncoder().encode(svg);
 
     return new NextResponse(body, {
       headers: {
@@ -174,7 +188,7 @@ export async function POST(request: NextRequest) {
  *     &useSeparateDotColor=1&dotColor=#FF0000
  *     &useSeparateEyeColor=1&eyeFrameColor=#0000FF&eyeBallColor=#00FF00
  *
- * Возвращает векторный SVG (по умолчанию) или растровый PNG (format=png).
+ * Возвращает векторный SVG (по умолчанию) или растровый PNG/JPG (format=png|jpg).
  * Для логотипа и больших данных используйте POST.
  */
 export async function GET(request: NextRequest) {
@@ -238,11 +252,13 @@ export async function GET(request: NextRequest) {
       margin: size * (marginPct / 100),
     });
 
-    const format = sp.get('format') === 'png' ? 'png' : 'svg';
+    const format = sp.get('format') === 'png' ? 'png' : sp.get('format') === 'jpg' ? 'jpg' : 'svg';
     const body =
       format === 'png'
         ? new Uint8Array(await svgToPng(svg, size))
-        : new TextEncoder().encode(svg);
+        : format === 'jpg'
+          ? new Uint8Array(await svgToJpg(svg, size))
+          : new TextEncoder().encode(svg);
 
     return new NextResponse(body, {
       headers: {

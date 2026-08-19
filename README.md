@@ -14,6 +14,7 @@
 - **Настройка коррекции ошибок**: выбор уровня (L, M, Q, H)
 - **Экспорт в форматах**: PNG, JPG, SVG (настоящий вектор, не растровое вложение), PDF + копирование в буфер обмена
 - **Пакетная генерация**: создание десятков QR-кодов из списка строк и скачивание одним ZIP-архивом (PNG или SVG) или PDF-сеткой для печати наклеек/этикеток
+- **Сканер QR**: распознавание кодов с фото или камеры (jsQR) с импортом распознанного содержимого обратно в генератор (URL, Wi-Fi, vCard, MECARD, VEVENT, Telegram, WhatsApp и др.)
 - **История QR-кодов**: сохранение готовых кодов (до 20) локально в браузере с быстрым восстановлением в один клик
 - **Проверка сканируемости**: декодирование QR-кода прямо в браузере (jsQR) с отчётом о совпадении данных
 - **Готовые шаблоны для печати**: визитки, пластиковые карты, наклейки, бейджи, меню, упаковка
@@ -21,7 +22,9 @@
 - **Предпросмотр в реальном времени**: мгновенное обновление QR-кода при изменении настроек
 - **Тёмная тема**: переключение светлой/тёмной темы с сохранением выбора
 - **Автосохранение настроек**: все параметры сохраняются в localStorage между сессиями
-- **REST API**: программная генерация QR-кодов через `GET /api/qr` (SVG или PNG)
+- **REST API**: программная генерация QR-кодов через `GET /api/qr` и `POST /api/qr` (SVG, PNG или JPG)
+- **PWA-готовность**: манифест, иконки всех размеров (включая maskable) для установки на домашний экран
+- **SEO**: Open Graph, Twitter Cards, канонический URL, sitemap, семантическая разметка
 - **Адаптивный дизайн**: оптимизирован для мобильных и десктопов
 - **Развёртывание**: готовые `Dockerfile` и `amvera.yml` для публикации на Amvera Cloud
 
@@ -67,9 +70,11 @@ npm run dev
 qr-generator/
 ├── src/
 │   ├── app/                    # Next.js App Router
-│   │   ├── api/qr/             # API генерации QR (GET /api/qr)
+│   │   ├── api/qr/             # API генерации QR (GET/POST /api/qr)
 │   │   ├── globals.css         # Глобальные стили
-│   │   ├── layout.tsx          # Корневой layout
+│   │   ├── layout.tsx          # Корневой layout (SEO, метаданные)
+│   │   ├── manifest.ts         # PWA-манифест
+│   │   ├── sitemap.ts          # Sitemap для поисковиков
 │   │   └── page.tsx            # Главная страница
 │   ├── components/
 │   │   ├── qr/                 # Компоненты генерации QR
@@ -82,6 +87,7 @@ qr-generator/
 │   │   │   ├── logo-panel.tsx         # Панель логотипа
 │   │   │   ├── qr-data-preview.tsx   # Предпросмотр сырых данных
 │   │   │   ├── qr-preview.tsx        # Предпросмотр QR + проверка сканируемости
+│   │   │   ├── scanner-panel.tsx     # Сканер QR (фото/камера) + импорт
 │   │   │   ├── settings-panel.tsx    # Общие настройки
 │   │   │   └── type-selector.tsx     # Выбор типа данных
 │   │   ├── theme-provider.tsx  # Провайдер темы (next-themes)
@@ -90,6 +96,9 @@ qr-generator/
 │   ├── hooks/                  # Кастомные React-хуки
 │   └── lib/
 │       ├── qr-encoders.ts      # Логика кодирования данных
+│       ├── qr-encoders.test.ts # Юнит-тесты кодировщиков
+│       ├── qr-importer.ts      # Распознавание содержимого QR (импорт из сканера)
+│       ├── qr-importer.test.ts # Юнит-тесты импортёра
 │       ├── qr-renderer.ts      # Рендеринг QR на Canvas + генерация векторного SVG
 │       ├── qr-store.ts         # State-менеджмент (Zustand + persist)
 │       └── qr-types.ts         # Типы и справочники
@@ -116,7 +125,7 @@ qr-generator/
 
 ## REST API
 
-Программная генерация QR-кодов (SVG по умолчанию, PNG при `format=png`):
+Программная генерация QR-кодов (SVG по умолчанию, PNG при `format=png`, JPG при `format=jpg`):
 
 ```
 GET /api/qr?data=https://example.com&size=1024&foreground=%23000000&background=%23FFFFFF
@@ -126,7 +135,7 @@ GET /api/qr?data=https://example.com&size=1024&foreground=%23000000&background=%
 |--------------------|---------------------------------------------|--------------|
 | `data`             | Содержимое QR-кода (обязательный)           | —            |
 | `size`             | Размер изображения, px (128–4096)           | `1024`       |
-| `format`           | `svg` или `png`                             | `svg`        |
+| `format`           | `svg`, `png` или `jpg`                      | `svg`        |
 | `mode`             | `solid` или `gradient`                      | `solid`      |
 | `foreground`       | Цвет кода (hex)                             | `#000000`    |
 | `background`       | Цвет фона (hex)                             | `#FFFFFF`    |
@@ -149,6 +158,9 @@ curl "https://your-domain/api/qr?data=HELLO&size=2048&dotShape=dots&ec=H" -o qr.
 
 # Растровый PNG
 curl "https://your-domain/api/qr?data=HELLO&size=2048&format=png" -o qr.png
+
+# Растровый JPG
+curl "https://your-domain/api/qr?data=HELLO&size=2048&format=jpg" -o qr.jpg
 ```
 
 ## Переменные окружения
@@ -156,6 +168,15 @@ curl "https://your-domain/api/qr?data=HELLO&size=2048&format=png" -o qr.png
 | Переменная      | Описание                        | Пример                        |
 |-----------------|---------------------------------|-------------------------------|
 | `DATABASE_URL`  | URL-подключение к PostgreSQL    | `postgresql://user:pass@localhost:5432/db` |
+| `SITE_URL`      | URL сайта для SEO/Open Graph    | `https://qr-generator.example` |
+
+## Тестирование
+
+Юнит-тесты кодировщиков и импортёра QR-данных (Bun):
+
+```bash
+bun test
+```
 
 ## Сборка и запуск
 
