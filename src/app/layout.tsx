@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "QR Generator — Профессиональный генератор QR-кодов",
   description:
-    "Бесплатный генератор QR-кодов с кастомным дизайном. 13 типов данных (URL, Wi-Fi, vCard, YouTube и др.), градиенты, логотипы, 11 форм точек, экспорт PNG/SVG/PDF, пресеты для печати.",
+    "Бесплатный генератор QR-кодов с кастомным дизайном. 12 типов данных (URL, Wi-Fi, vCard, геолокация и др.), градиенты, логотипы, 11 форм точек, экспорт PNG/JPG/SVG/PDF, пресеты для печати.",
   keywords: [
     "QR-код",
     "генератор QR",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     "QR генератор онлайн",
     "QR Wi-Fi",
     "QR vCard",
-    "QR YouTube",
+    "QR геолокация",
   ],
   icons: {
     icon: '/favicon.svg',

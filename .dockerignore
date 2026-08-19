@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+*.log
+.env*
+db
+tsconfig.tsbuildinfo
+next-env.d.ts
+Dockerfile
+.dockerignore
+amvera.yml
+dev.log
+server.log

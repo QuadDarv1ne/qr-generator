@@ -129,7 +129,7 @@ export default function QRGeneratorPage() {
               <span className="text-primary">QR-код генератор</span>
             </h1>
             <p className="mt-2 md:mt-3 text-muted-foreground text-sm md:text-lg leading-relaxed">
-              Уникальный дизайн, логотипы, градиенты, экспорт для печати. 12 типов данных, 8 форм точек.
+              Уникальный дизайн, логотипы, градиенты, экспорт для печати. 12 типов данных, 11 форм точек.
             </p>
           </div>
         </div>
@@ -335,7 +335,7 @@ export default function QRGeneratorPage() {
             />
             <FeatureCard
               icon={Shapes}
-              title="8 форм точек"
+              title="11 форм точек"
               description="Квадраты, круги, ромбы, звёзды и другие формы для уникального дизайна QR-кода."
             />
             <FeatureCard
@@ -357,7 +357,7 @@ export default function QRGeneratorPage() {
             <Accordion type="single" collapsible className="w-full">
               <FAQItem
                 q="Какие форматы экспорта доступны?"
-                a="Вы можете скачать QR-код в форматах PNG (растровое изображение высокого разрешения), SVG (вектор) и PDF (формат A4 для печати с выбором размера). Также доступно копирование в буфер обмена."
+                a="Вы можете скачать QR-код в форматах PNG и JPG (растровые изображения высокого разрешения), SVG (вектор) и PDF (формат A4 для печати с выбором размера). Также доступно копирование в буфер обмена и отправка через «Поделиться»."
               />
               <FAQItem
                 q="Могу ли я добавить логотип в QR-код?"

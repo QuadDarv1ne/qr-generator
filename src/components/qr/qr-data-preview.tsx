@@ -3,12 +3,13 @@
 import { useCallback, useState } from 'react';
 import { useQRStore } from '@/lib/qr-store';
 import { encodeQRData, validateQRData, getQRDataLimit } from '@/lib/qr-encoders';
+import { getPrintPresetConfig } from '@/lib/qr-renderer';
 import { Button } from '@/components/ui/button';
 import { Copy, Check, Code2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function QRDataPreview() {
-  const { dataType, formData, errorCorrection } = useQRStore();
+  const { dataType, formData, errorCorrection, printPreset } = useQRStore();
   const [copied, setCopied] = useState(false);
 
   const dataString = useCallback(() => {
@@ -16,9 +17,13 @@ export function QRDataPreview() {
   }, [dataType, formData]);
 
   const data = dataString();
-  const limit = getQRDataLimit(errorCorrection);
+  const effectiveEC =
+    printPreset !== 'none'
+      ? getPrintPresetConfig(printPreset).errorCorrection
+      : errorCorrection;
+  const limit = getQRDataLimit(effectiveEC);
   const usagePercent = Math.min((data.length / limit) * 100, 100);
-  const isValid = validateQRData(data, errorCorrection) === null;
+  const isValid = validateQRData(data, effectiveEC) === null;
 
   const copyToClipboard = async () => {
     try {

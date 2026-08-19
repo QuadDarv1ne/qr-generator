@@ -5,7 +5,7 @@ import { useQRStore } from '@/lib/qr-store';
 import { encodeQRData, validateQRData } from '@/lib/qr-encoders';
 import { renderQRToCanvas, generateQRSVG, getPrintPresetConfig } from '@/lib/qr-renderer';
 import { Button } from '@/components/ui/button';
-import { Download, FileImage, FileText, Loader2, Copy, RotateCcw, Check, Share2 } from 'lucide-react';
+import { Download, FileImage, FileText, Loader2, Copy, RotateCcw, Check, Share2, ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Select,
@@ -188,6 +188,44 @@ export function ExportPanel() {
     }
   };
 
+  const exportJPG = async () => {
+    const err = validate();
+    if (err) { toast.error(err); return; }
+
+    setExporting('jpg');
+    try {
+      const canvas = document.createElement('canvas');
+      const opts = getExportOptions();
+      // JPG does not support transparency — fall back to a white background
+      if (opts.colors.transparentBackground) {
+        opts.colors = { ...opts.colors, transparentBackground: false, backgroundColor: '#FFFFFF' };
+      }
+      await renderQRToCanvas(canvas, opts);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/jpeg', 0.92)
+      );
+      if (!blob) {
+        toast.error('Не удалось создать изображение');
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `qrcode-${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('JPG успешно сохранён');
+    } catch {
+      toast.error('Ошибка при экспорте JPG');
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const exportPDF = async () => {
     const err = validate();
     if (err) { toast.error(err); return; }
@@ -291,7 +329,7 @@ export function ExportPanel() {
         </Button>
 
         {/* Secondary row */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <Button
             onClick={exportSVG}
             disabled={isExporting}
@@ -305,6 +343,20 @@ export function ExportPanel() {
               <Download className="h-3.5 w-3.5 mr-1" />
             )}
             SVG
+          </Button>
+          <Button
+            onClick={exportJPG}
+            disabled={isExporting}
+            variant="outline"
+            size="lg"
+            className="text-xs"
+          >
+            {exporting === 'jpg' ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+            ) : (
+              <ImageIcon className="h-3.5 w-3.5 mr-1" />
+            )}
+            JPG
           </Button>
           <Button
             onClick={exportPDF}

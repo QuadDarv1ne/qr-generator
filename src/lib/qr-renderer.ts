@@ -386,7 +386,7 @@ export async function renderQRToCanvas(
   canvas: HTMLCanvasElement,
   options: QRRenderOptions
 ): Promise<void> {
-  const { data, size, colors, dotShape, eyeFrame, eyeBall, errorCorrection, logo, margin, logoSize = 22 } = options;
+  const { data, size, colors, dotShape, eyeFrame, eyeBall, errorCorrection, logo, margin, logoSize = 22, logoShape = 'rounded' } = options;
 
   if (!data || data.length === 0) {
     canvas.width = size;
@@ -474,7 +474,8 @@ export async function renderQRToCanvas(
 
   // Draw logo
   if (logo) {
-    await drawLogo(ctx, logo, size, moduleCount, margin, colors.backgroundColor, logoSize, logoShape);
+    const logoBg = colors.transparentBackground ? 'rgba(255,255,255,0.9)' : colors.backgroundColor;
+    await drawLogo(ctx, logo, size, moduleCount, margin, logoBg, logoSize, logoShape);
   }
 }
 
@@ -708,9 +709,10 @@ export async function generateQRSVG(options: QRRenderOptions): Promise<string> {
         : logoShape === 'square'
           ? logoSizePx * 0.04
           : bgRadius * 0.7;
+    const logoBg = colors.transparentBackground ? 'rgba(255,255,255,0.9)' : colors.backgroundColor;
     parts.push(
       `<rect x="${num(x - padding)}" y="${num(y - padding)}" width="${num(logoSizePx + padding * 2)}"` +
-        ` height="${num(logoSizePx + padding * 2)}" rx="${num(bgRadius)}" fill="${colors.backgroundColor}"/>`
+        ` height="${num(logoSizePx + padding * 2)}" rx="${num(bgRadius)}" fill="${logoBg}"/>`
     );
     parts.push(`<clipPath id="qrc"><rect x="${num(x)}" y="${num(y)}" width="${num(logoSizePx)}"` +
       ` height="${num(logoSizePx)}" rx="${num(clipRadius)}"/></clipPath>`);

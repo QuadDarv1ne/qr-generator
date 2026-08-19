@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 import { generateQRSVG } from '@/lib/qr-renderer';
 import { validateQRData } from '@/lib/qr-encoders';
 import { z } from 'zod';
@@ -39,13 +40,26 @@ const hexColor = (def: string) =>
     .regex(/^#[0-9a-fA-F]{3,8}$/, 'Ожидается HEX-цвет вида #RRGGBB')
     .default(def);
 
+/** Rasterize an SVG string into a PNG buffer via sharp (libvips). */
+async function svgToPng(svg: string, size: number): Promise<Buffer> {
+  // density=144 renders SVG (72dpi default) at 2x, then downscale for crisp edges
+  return sharp(Buffer.from(svg), { density: 144 })
+    .resize(size, size)
+    .png()
+    .toBuffer();
+}
+
+const contentType = (format: 'svg' | 'png') =>
+  format === 'png' ? 'image/png' : 'image/svg+xml; charset=utf-8';
+
 /**
  * POST /api/qr
  * JSON-тело: { data, size?, margin?, ec?, mode?, foreground?, background?,
  *   gradientType?, gradientStart?, gradientEnd?, gradientRotation?,
- *   dotShape?, eyeFrame?, eyeBall?, transparent?, logoSize?, logoShape?, logo? }
+ *   dotShape?, eyeFrame?, eyeBall?, transparent?, logoSize?, logoShape?, logo?,
+ *   format? ('svg' | 'png') }
  * Логотип передаётся как data URL (base64) — позволяет обойти лимиты длины URL.
- * Возвращает векторный SVG.
+ * По умолчанию возвращает векторный SVG, при format='png' — растровый PNG.
  */
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -81,6 +95,7 @@ export async function POST(request: NextRequest) {
     logoSize: z.number().min(10).max(40).default(22),
     logoShape: z.enum(LOGO_SHAPES).default('rounded'),
     logo: z.string().max(5_000_000).nullable().optional(),
+    format: z.enum(['svg', 'png']).default('svg'),
   });
 
   const parsed = schema.safeParse(body);
@@ -131,11 +146,16 @@ export async function POST(request: NextRequest) {
       margin: p.size * (p.margin / 100),
     });
 
-    return new NextResponse(svg, {
+    const body =
+      p.format === 'png'
+        ? new Uint8Array(await svgToPng(svg, p.size))
+        : new TextEncoder().encode(svg);
+
+    return new NextResponse(body, {
       headers: {
-        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Content-Type': contentType(p.format),
         'Cache-Control': 'no-store',
-        'Content-Disposition': 'inline; filename="qrcode.svg"',
+        'Content-Disposition': `inline; filename="qrcode.${p.format}"`,
       },
     });
   } catch {
@@ -150,11 +170,12 @@ export async function POST(request: NextRequest) {
  * GET /api/qr?data=...&size=1024&foreground=#000000&background=#FFFFFF
  *     &dotShape=square&eyeFrame=square&eyeBall=square&ec=M&mode=solid
  *     &gradientStart=...&gradientEnd=...&gradientRotation=45&margin=8&transparent=0
- *     &logoSize=22&logoShape=rounded
+ *     &logoSize=22&logoShape=rounded&format=png
  *     &useSeparateDotColor=1&dotColor=#FF0000
  *     &useSeparateEyeColor=1&eyeFrameColor=#0000FF&eyeBallColor=#00FF00
  *
- * Возвращает векторный SVG QR-кода. Для логотипа и больших данных используйте POST.
+ * Возвращает векторный SVG (по умолчанию) или растровый PNG (format=png).
+ * Для логотипа и больших данных используйте POST.
  */
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
@@ -217,11 +238,17 @@ export async function GET(request: NextRequest) {
       margin: size * (marginPct / 100),
     });
 
-    return new NextResponse(svg, {
+    const format = sp.get('format') === 'png' ? 'png' : 'svg';
+    const body =
+      format === 'png'
+        ? new Uint8Array(await svgToPng(svg, size))
+        : new TextEncoder().encode(svg);
+
+    return new NextResponse(body, {
       headers: {
-        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Content-Type': contentType(format),
         'Cache-Control': 'public, max-age=3600',
-        'Content-Disposition': 'inline; filename="qrcode.svg"',
+        'Content-Disposition': `inline; filename="qrcode.${format}"`,
       },
     });
   } catch {

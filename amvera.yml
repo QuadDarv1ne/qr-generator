@@ -1,0 +1,9 @@
+# Конфигурация развёртывания на Amvera Cloud (https://amvera.ru)
+# Используется Dockerfile из корня репозитория.
+meta:
+  environment: docker
+  toolchain:
+    name: docker
+
+run:
+  containerPort: 3000
